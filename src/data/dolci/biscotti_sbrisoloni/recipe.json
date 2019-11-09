@@ -1,0 +1,69 @@
+{
+  "title": "Biscotti sbrisoloni",
+  "slug": "biscotti-sbrisoloni",
+  "image": "biscotti_sbrisoloni.jpg",
+  "ingredients": [
+    {
+      "name": "farina 00",
+      "qty": "220 grammi"
+    },
+    {
+      "name": "zucchero",
+      "qty": "120 grammi"
+    },
+    {
+      "name": "cioccolato fondente",
+      "qty": "95 grammi"
+    },
+    {
+      "name": "latte",
+      "qty": "25 grammi"
+    },
+    {
+      "name": "cacao",
+      "qty": "un pò"
+    },
+    {
+      "name": "uova",
+      "qty": "1"
+    },
+    {
+      "name": "mandorle",
+      "qty": "120 grammi",
+      "notes": "a pezzetti"
+    },
+    {
+      "name": "farina di mais",
+      "qty": "60 grammi"
+    },
+    {
+      "name": "tuorlo d\"uovo",
+      "qty": "1"
+    },
+    {
+      "name": "lievito in polvere per dolci",
+      "qty": "4 grammi"
+    },
+    {
+      "name": "sale",
+      "qty": "un pò"
+    }
+  ],
+  "duration": "1 ora e 15 minuti",
+  "cooking_infos": "Forno statico a  180°c",
+  "procedure": [
+    "Fondere 25  gr di cioccolato e sminuzzare il resto",
+    "Setacciare la farina 00 , il lievito e il cacao, mescolarli, unire anche la farina di mais e formare una fontana sul piano di lavoro",
+    "Sbattere l'uovo, prelevarne 15 grammi (il resto non serve) e sbatteteli in una ciotolina con il tuorlo, il latte e un pizzico di sale.",
+    "Mescolare il burro con il cioccolato fuso e lo zucchero",
+    "Versare al centro della fontana prima il burro al cioccolato, poi le uova sbattute con il latte",
+    "Iniziare a lavorare l’impasto amalgamando prima tra loro gli ingredienti al centro, poi incorporando le farine",
+    "Completate unendo anche le mandorle e il cioccolato a pezzetti",
+    "Formare delle sfere di circa 3 cm di diametro, accomodarle su una o più placche foderate di carta da forno e schiacciarle leggermente in modo da formare dei dischi irregolari",
+    "Infornarli a 180°C per 15-18 minuti",
+    "Sfornare i biscotti e farli raffreddare del tutto prima di gustarli."
+  ],
+  "note": "",
+  "picture": "",
+  "keywords": ["biscotti", "cookies", "dolci"]
+}
