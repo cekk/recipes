@@ -1,36 +1,39 @@
 import React from "react";
-import Container from "@material-ui/core/Container";
 import Typography from "@material-ui/core/Typography";
-import Box from "@material-ui/core/Box";
-import { Link } from "gatsby-theme-material-ui";
-import ProTip from "../components/ProTip";
+import { makeStyles } from "@material-ui/core/styles";
+import Container from "@material-ui/core/Container";
+import Layout from "../components/Layout";
+import HomepageListing from "../components/HomepageListing";
 
-function Copyright() {
-  return (
-    <Typography variant="body2" color="textSecondary" align="center">
-      {"Copyright © "}
-      <Link color="inherit" href="https://material-ui.com/">
-        Your Website
-      </Link>{" "}
-      {new Date().getFullYear()}
-      {"."}
-    </Typography>
-  );
-}
+const useStyles = makeStyles(theme => ({
+  icon: {
+    marginRight: theme.spacing(2)
+  },
+  heroContent: {
+    backgroundColor: theme.palette.background.paper,
+    padding: theme.spacing(8, 0, 6)
+  }
+}));
 
-export default function Index() {
+export default function Album() {
+  const classes = useStyles();
+
   return (
-    <Container maxWidth="sm">
-      <Box my={4}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Gatsby v4-beta example
-        </Typography>
-        <Link to="/about" color="secondary">
-          Go to the about page
-        </Link>
-        <ProTip />
-        <Copyright />
-      </Box>
-    </Container>
+    <Layout>
+      <div className={classes.heroContent}>
+        <Container maxWidth="sm">
+          <Typography
+            component="h1"
+            variant="h2"
+            align="center"
+            color="textPrimary"
+            gutterBottom
+          >
+            Last recipes
+          </Typography>
+        </Container>
+      </div>
+      <HomepageListing />
+    </Layout>
   );
 }

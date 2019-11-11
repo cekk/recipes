@@ -1,0 +1,47 @@
+{
+  "title": "Pizza al farro di Sorbillo",
+  "slug": "/recipes/pizza-al-farro",
+  "image": {},
+  "ingredients": [
+    {
+      "name": "acqua",
+      "qty": "200 grammi"
+    },
+    {
+      "name": "farina di tipo 0",
+      "qty": "150 grammi"
+    },
+    {
+      "name": "farina di farro",
+      "qty": "150 grammi"
+    },
+    {
+      "name": "sale",
+      "qty": "10 grammi"
+    },
+    {
+      "name": "lievito di birra secco",
+      "qty": "1 grammo"
+    }
+  ],
+  "duration": "1 ora e 15 minuti",
+  "cooking_infos": "Forno statico a 250°C",
+  "procedure": [
+    "Impastare tutti gli ingredienti fino ad ottenere una massa morbida e compatta.",
+    "Lasciare a riposare la pagnotta per circa 6 ore in un recipiente coperto da una pellicola trasparente in modo che non passi aria.",
+    "Passate le 6 ore, spianare la pagnotta utilizzando pochissima velatura di farina.",
+    "Mettere la pasta su una teglia foderata di carta da forno, spennellare la superficie con un leggerissimo strato di olio extravergine di oliva italiano biologico e coprire la superficie con la plastica per alimenti (che fisseremo ben tesa sui bordi del perimetro della teglia di metallo).",
+    "Versare al centro della fontana prima il burro al cioccolato, poi le uova sbattute con il latte",
+    "Aspettare altre 2 ore",
+    "Scaldare il forno a 250°",
+    "Infornare per 3 minuti.",
+    "Togliere fuori la pizza e condirla a piacere",
+    "Cuocere per altri 10/12 minuti."
+  ],
+  "note": "",
+  "keywords": ["pizza", "farro"],
+  "source": {
+    "name": "Scatti di gusto",
+    "url": "https://www.scattidigusto.it/2015/03/17/ricetta-pizza-impasto-fatta-in-casa-gino-sorbillo/"
+  }
+}

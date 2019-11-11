@@ -1,6 +1,6 @@
 {
   "title": "Biscotti sbrisoloni",
-  "slug": "biscotti-sbrisoloni",
+  "slug": "/recipes/biscotti-sbrisoloni",
   "image": "biscotti_sbrisoloni.jpg",
   "ingredients": [
     {
@@ -64,6 +64,9 @@
     "Sfornare i biscotti e farli raffreddare del tutto prima di gustarli."
   ],
   "note": "",
-  "picture": "",
-  "keywords": ["biscotti", "cookies", "dolci"]
+  "keywords": ["biscotti", "cookies", "dolci"],
+  "source": {
+    "name": "La cucina italiana",
+    "url": "https://www.lacucinaitaliana.it/ricetta/dolci-e-dessert/biscotti-sbrisoloni/"
+  }
 }
