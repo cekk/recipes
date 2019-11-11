@@ -16,9 +16,7 @@ module.exports = {
     "gatsby-transformer-sharp",
     "gatsby-plugin-sharp"
   ],
-  module.exports = {
-    pathPrefix: "/reponame",
-  }
+  pathPrefix: "/reponame",
   siteMetadata: {
     title: "My page"
   }
