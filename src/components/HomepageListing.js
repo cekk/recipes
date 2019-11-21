@@ -55,7 +55,9 @@ const HomepageListing = ({ recipe }) => {
               node {
                 id
                 title
-                slug
+                fields {
+                  slug
+                }
                 image {
                   childImageSharp {
                     fixed(height: 100) {
@@ -81,7 +83,8 @@ const HomepageListing = ({ recipe }) => {
             {/* End hero unit */}
             <Grid container spacing={4}>
               {allRecipe.edges.map(({ node }) => {
-                const { id, image, title, slug } = node;
+                const { id, image, title, fields } = node;
+                const { slug } = fields;
                 return (
                   <Grid item key={id} xs={12} sm={6} md={4}>
                     <Card className={classes.card}>

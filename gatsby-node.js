@@ -1,10 +1,39 @@
+const { createFilePath } = require(`gatsby-source-filesystem`);
+const slugify = require("slugify");
+
+exports.onCreateNode = ({ node, getNode, actions }) => {
+  const { createNodeField } = actions;
+  // Ensures we are processing only recipes
+  if (node.internal.type === "recipe") {
+    console.log(node);
+    const relativeFilePath = createFilePath({
+      node,
+      getNode,
+      basePath: "data/",
+      trailingSlash: false
+    });
+    console.log(relativeFilePath);
+    // Creates new query'able field with name of 'slug'
+    createNodeField({
+      node,
+      name: "slug",
+      value: `${relativeFilePath.substring(
+        0,
+        relativeFilePath.lastIndexOf("/")
+      )}/${slugify(node.title, { lower: true })}`
+    });
+  }
+};
+
 exports.createPages = async ({ actions: { createPage }, graphql }) => {
   const results = await graphql(`
     {
       allRecipe {
         edges {
           node {
-            slug
+            fields {
+              slug
+            }
           }
         }
       }
@@ -15,10 +44,10 @@ exports.createPages = async ({ actions: { createPage }, graphql }) => {
     const recipe = edge.node;
 
     createPage({
-      path: recipe.slug,
+      path: recipe.fields.slug,
       component: require.resolve("./src/templates/Recipe.js"),
       context: {
-        slug: recipe.slug
+        slug: recipe.fields.slug
       }
     });
   });

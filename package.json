@@ -13,9 +13,11 @@
     "gatsby-theme-material-ui": "latest",
     "gatsby-transformer-json": "^2.2.16",
     "gatsby-transformer-sharp": "^2.3.2",
+    "gatsby-transformer-yaml": "^2.2.17",
     "react": "latest",
     "react-dom": "latest",
-    "react-helmet": "latest"
+    "react-helmet": "latest",
+    "slugify": "^1.3.6"
   },
   "scripts": {
     "develop": "gatsby develop",

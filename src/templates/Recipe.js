@@ -7,15 +7,15 @@ import { makeStyles } from "@material-ui/core/styles";
 import Layout from "../components/Layout";
 import Procedure from "../components/Procedure";
 import Ingredients from "../components/Ingredients";
+import TimerIcon from "@material-ui/icons/Timer";
 
 export const query = graphql`
   query($slug: String!) {
-    recipe(slug: { eq: $slug }) {
+    recipe(fields: { slug: { eq: $slug } }) {
       title
       procedure
       ingredients {
         name
-        notes
         qty
       }
       image {

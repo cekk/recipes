@@ -1,8 +1,14 @@
 module.exports = {
   plugins: [
     "gatsby-theme-material-ui",
+    // {
+    //   resolve: `gatsby-transformer-json`,
+    //   options: {
+    //     typeName: `recipe`
+    //   }
+    // },
     {
-      resolve: `gatsby-transformer-json`,
+      resolve: `gatsby-transformer-yaml`,
       options: {
         typeName: `recipe`
       }
