@@ -29,7 +29,7 @@ export default function Album() {
             color="textPrimary"
             gutterBottom
           >
-            Last recipes
+            Ultime ricette
           </Typography>
         </Container>
       </div>

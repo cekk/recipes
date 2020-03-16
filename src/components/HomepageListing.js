@@ -118,7 +118,7 @@ const HomepageListing = ({ recipe }) => {
                           size="small"
                           color="secondary"
                         >
-                          View
+                          Dettaglio
                         </Button>
                       </CardActions>
                     </Card>

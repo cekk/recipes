@@ -23,7 +23,7 @@ const Ingredients = ({ recipe }) => {
       )}
       <CardContent>
         <Typography gutterBottom variant="h5" component="h2">
-          Ingredients
+          Ingredienti
         </Typography>
         <List dense={true}>
           {ingredients
