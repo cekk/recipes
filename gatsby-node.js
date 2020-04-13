@@ -5,14 +5,12 @@ exports.onCreateNode = ({ node, getNode, actions }) => {
   const { createNodeField } = actions;
   // Ensures we are processing only recipes
   if (node.internal.type === "recipe") {
-    console.log(node);
     const relativeFilePath = createFilePath({
       node,
       getNode,
       basePath: "data/",
-      trailingSlash: false
+      trailingSlash: false,
     });
-    console.log(relativeFilePath);
     // Creates new query'able field with name of 'slug'
     createNodeField({
       node,
@@ -20,7 +18,7 @@ exports.onCreateNode = ({ node, getNode, actions }) => {
       value: `${relativeFilePath.substring(
         0,
         relativeFilePath.lastIndexOf("/")
-      )}/${slugify(node.title, { lower: true })}`
+      )}/${slugify(node.title, { lower: true })}`,
     });
   }
 };
@@ -40,15 +38,15 @@ exports.createPages = async ({ actions: { createPage }, graphql }) => {
     }
   `);
 
-  results.data.allRecipe.edges.forEach(edge => {
+  results.data.allRecipe.edges.forEach((edge) => {
     const recipe = edge.node;
 
     createPage({
       path: recipe.fields.slug,
       component: require.resolve("./src/templates/Recipe.js"),
       context: {
-        slug: recipe.fields.slug
-      }
+        slug: recipe.fields.slug,
+      },
     });
   });
 };

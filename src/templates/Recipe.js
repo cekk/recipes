@@ -7,7 +7,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import Layout from "../components/Layout";
 import Procedure from "../components/Procedure";
 import Ingredients from "../components/Ingredients";
-import TimerIcon from "@material-ui/icons/Timer";
+import Notes from "../components/Notes";
 
 export const query = graphql`
   query($slug: String!) {
@@ -17,6 +17,10 @@ export const query = graphql`
       ingredients {
         name
         qty
+      }
+      note {
+        description
+        videoUrl
       }
       image {
         childImageSharp {
@@ -29,19 +33,19 @@ export const query = graphql`
   }
 `;
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   root: {
     flexGrow: 1,
-    maxWidth: 752
+    maxWidth: 752,
   },
   title: {
-    margin: theme.spacing(4, 0, 2)
+    margin: theme.spacing(4, 0, 2),
   },
   mainFeaturedPost: {
     position: "relative",
     backgroundColor: theme.palette.grey[800],
     color: theme.palette.common.white,
-    marginBottom: theme.spacing(4)
+    marginBottom: theme.spacing(4),
   },
   overlay: {
     position: "absolute",
@@ -49,16 +53,16 @@ const useStyles = makeStyles(theme => ({
     bottom: 0,
     right: 0,
     left: 0,
-    backgroundColor: "rgba(0,0,0,.3)"
+    backgroundColor: "rgba(0,0,0,.3)",
   },
   mainFeaturedPostContent: {
     position: "relative",
     padding: theme.spacing(3),
     [theme.breakpoints.up("md")]: {
       padding: theme.spacing(6),
-      paddingRight: 0
-    }
-  }
+      paddingRight: 0,
+    },
+  },
 }));
 
 const Recipe = ({ data }) => {
@@ -81,6 +85,7 @@ const Recipe = ({ data }) => {
         </Grid>
         <Grid item xs={12} sm={8}>
           <Procedure steps={recipe.procedure} />
+          <Notes notes={recipe.note} />
         </Grid>
       </Grid>
     </Layout>

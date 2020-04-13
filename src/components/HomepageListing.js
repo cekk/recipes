@@ -12,36 +12,36 @@ import Image from "gatsby-image";
 import { Link } from "gatsby";
 import Typography from "@material-ui/core/Typography";
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   icon: {
-    marginRight: theme.spacing(2)
+    marginRight: theme.spacing(2),
   },
   heroContent: {
     backgroundColor: theme.palette.background.paper,
-    padding: theme.spacing(8, 0, 6)
+    padding: theme.spacing(8, 0, 6),
   },
   heroButtons: {
-    marginTop: theme.spacing(4)
+    marginTop: theme.spacing(4),
   },
   cardGrid: {
     paddingTop: theme.spacing(8),
-    paddingBottom: theme.spacing(8)
+    paddingBottom: theme.spacing(8),
   },
   card: {
     height: "100%",
     display: "flex",
-    flexDirection: "column"
+    flexDirection: "column",
   },
   cardMedia: {
     // height: "100px" // 16:9
   },
   cardContent: {
-    flexGrow: 1
+    flexGrow: 1,
   },
   footer: {
     backgroundColor: theme.palette.background.paper,
-    padding: theme.spacing(6)
-  }
+    padding: theme.spacing(6),
+  },
 }));
 
 const HomepageListing = ({ recipe }) => {
