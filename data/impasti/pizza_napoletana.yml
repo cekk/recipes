@@ -1,0 +1,43 @@
+---
+title: Pizza napoletana
+date: 02/05/2020
+image: ../default.jpg
+ingredients:
+  - name: Acqua
+    qty: 100ml
+  - name: Farina di tipo 0
+    qty: 160 gr
+  - name: Sale
+    qty: 5 gr
+  - name: Lievito di birra (fresco o secco)
+    qty: un pizzico (< 1gr)
+  - name: Zucchero
+    qty: 2 gr
+  - name: Olio evo
+    qty: 5gr
+duration:
+cooking_infos: Forno per pizza 5 minuti
+procedure:
+  - Gli ingredienti riportati sono per pizza (panetto), quindi se si vogliono fare 2 pizze, vanno raddoppiati e così via.
+  - Sciogliere il lievito in una parte dell'acqua necessaria
+  - Sciogliere lo zucchero nell'acqua rimanente
+  - In una ciotola capiente, mettere tutta la farina
+  - Aggiungere il lievito
+  - Aggiungere l'acqua un po' alla volta mescolando con un cucchiaio e idratando la farina
+  - Quando abbiamo mescolato un po', aggiungere il sale e l'olio
+  - Trasferiamo il panetto su un piano infarinato e iniziamo ad impastarlo per 15/20 minuti fino ad avere un impasto lucido ed elastico
+  - Corpire 20 minuti con la ciotola
+  - Stagliare l'impasto in panetti di uguali dimensioni
+  - Mettere i panetti in un contenitore/teglia chiuso con pellicola trasparente
+  - Far lievitare per almeno 6/8 ore (meglio 24)
+  - Trascorso il tempo di lievitazione, stendere l'impasto e condirlo a piacere
+  - Se si cuoce nel fornetto, mettere già tutti gli ingredienti e infornare per 5 minuti
+note:
+  - description: Video su come fare l'impasto
+    videoUrl: https://www.youtube.com/watch?v=Cq90lUQUCUo
+keywords:
+  - pizza
+  - napoletana
+source:
+  name: Youtube
+  url: https://www.youtube.com/watch?v=Cq90lUQUCUo
