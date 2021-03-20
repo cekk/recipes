@@ -7,7 +7,9 @@ import { makeStyles } from "@material-ui/core/styles";
 import Layout from "../components/Layout";
 import Procedure from "../components/Procedure";
 import Ingredients from "../components/Ingredients";
+import Infos from "../components/Infos";
 import Notes from "../components/Notes";
+import Card from "@material-ui/core/Card";
 
 export const query = graphql`
   query($slug: String!) {
@@ -28,6 +30,10 @@ export const query = graphql`
             ...GatsbyImageSharpFluid
           }
         }
+      }
+      source {
+        name
+        url
       }
     }
   }
@@ -81,7 +87,10 @@ const Recipe = ({ data }) => {
       </Paper>
       <Grid container spacing={3}>
         <Grid item xs={12} sm={4}>
-          <Ingredients recipe={recipe} />
+          <Card>
+            <Ingredients recipe={recipe} />
+            <Infos source={recipe.source} />
+          </Card>
         </Grid>
         <Grid item xs={12} sm={8}>
           <Procedure steps={recipe.procedure} />

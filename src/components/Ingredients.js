@@ -6,14 +6,13 @@ import ListItem from "@material-ui/core/ListItem";
 import ListItemIcon from "@material-ui/core/ListItemIcon";
 import ListItemText from "@material-ui/core/ListItemText";
 import LensIcon from "@material-ui/icons/Lens";
-import Card from "@material-ui/core/Card";
 import CardContent from "@material-ui/core/CardContent";
 import CardMedia from "@material-ui/core/CardMedia";
 
 const Ingredients = ({ recipe }) => {
   const { image, title, ingredients } = recipe;
   return (
-    <Card>
+    <React.Fragment>
       {image ? (
         <CardMedia alt="Ingredients" height="140" title="Ingredients">
           <Image fluid={image.childImageSharp.fluid} alt={title} />
@@ -42,7 +41,7 @@ const Ingredients = ({ recipe }) => {
             : ""}
         </List>
       </CardContent>
-    </Card>
+    </React.Fragment>
   );
 };
 
