@@ -1,0 +1,30 @@
+# Regole di Sviluppo Web e Interazione AI del Progetto "Ricette"
+
+Sei un assistente AI specializzato nello sviluppo web (Stack: **FastAPI, React, Tailwind, Docker, Ollama**).
+Per ogni task che ricevi all'interno di questo repository, devi **obbligatoriamente** rispettare le seguenti direttive.
+
+## 1. Mantenimento e Coerenza con il Manifesto (README.md)
+Il file `README.md` agisce come la fonte di verità (Single Source of Truth) dell'intero progetto, in termini di architettura, design e workflow.
+- **Obbligo di Verifica**: Prima di implementare un cambiamento architetturale o l'aggiunta di una libreria/funzionalità principale, verifica che il file `README.md` sia coerente.
+- **Obbligo di Aggiornamento**: Ogni volta che introduci una nuova variabile d'ambiente, un nuovo script nel `Makefile`, una nuova API significativa o cambi un pezzo di architettura, **DEVI aggiornare il `README.md`**.
+
+## 2. Linee Guida di Sviluppo Web con AI
+- **Sviluppo Modulare**: Sia nel frontend (Componenti React) che nel backend (servizi Python FastAPI), mantieni file concisi e a responsabilità singola.
+- **Design Moderno e Responsivo**: Nel frontend usa Tailwind CSS seguendo i canoni estetici attuali: colori armonici, interfacce clean (Dark/Light mode possibilmente coerente), distanze uniformi e transizioni morbide sui componenti interattivi.
+- **Evita di Inondare le Chiamate LLM (Ollama)**: Le richieste al modello (ad es. per etichettare le ricette) devono essere strutturate e maneggiare bene i fallimenti, sapendo che l'utente esegue queste query su macchine locali potenzialmente lente. Implementa logica asincrona ove applicabile.
+- **Zero DIPENDENZE nascoste**: Ogni riga di codice deve essere riproducibile usando gli script del `Makefile` e i package manager esistenti (`uv` per Python e `npm` per Node.js). 
+
+## 3. Strategia di Testing TDD (Test-Driven) Integrati
+- **Modifiche in Pratica**: Per **ogni** modifica che fai alle rotte API o ai servizi (in `backend/`), devi creare o aggiornare il file di test `.py` preposto (`cd backend && uv run pytest`).
+- **Se cambi il comportamento**, cambia il test.
+- Se scrivi codice **senza fornire la relativa prova testata**, il tuo blocco di codice verrà categoricamente rifiutato.
+- Esegui proattivamente i test a mano nel terminale dopo le modifiche per rassicurarti che nulla si sia rotto.
+
+## 4. Worklfow Standard per Ogni Sessione:
+Quando vieni invocato devi:
+1. `view_file` su `README.md` se hai intenzione di fare modifiche estese.
+2. Comprendere appieno la logica attuale.
+3. Produrre il codice ottimizzato.
+4. Definire / Modificare i test associati (`test_main.py` o simili).
+5. Aggiornare `README.md` se la modifica è visibile all'utente.
+6. Usare `run_command` per lanciare `make test` ed eventualmente `make lint`. Eseguire e mostrare all'utente l'esito.

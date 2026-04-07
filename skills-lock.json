@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "readme": {
+      "source": "Shpigford/skills",
+      "sourceType": "github",
+      "computedHash": "1626ec24fed073dc77c22f97a452b2dc0539e1d0c05023798915687929f3f97a"
+    }
+  }
+}

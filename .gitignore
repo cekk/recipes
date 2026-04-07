@@ -1,0 +1,30 @@
+# ─── Python ───────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+.env
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# ─── Node / Frontend ─────────────────────────────────
+node_modules/
+frontend/dist/
+
+# ─── IDE ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ─── Docker ───────────────────────────────────────────
+docker-compose.override.yml
+
+# ─── Misc ─────────────────────────────────────────────
+list_models.py
+*.log
