@@ -1,8 +1,9 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List
-from datetime import datetime, timezone
-import uuid
 import re
+import uuid
+from datetime import datetime, timezone
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
 
 
 def slugify(text: str) -> str:
@@ -68,9 +69,7 @@ class Recipe(BaseModel):
     source_type: str = "manual"
     image_urls: List[str] = []
     video_urls: List[str] = []
-    created_at: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: Optional[str] = None
 
     def model_post_init(self, __context):

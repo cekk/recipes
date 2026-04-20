@@ -1,7 +1,8 @@
 import math
 from typing import List, Tuple
-from models import RecipeSummary
+
 from github_store import store
+from models import RecipeSummary
 
 
 def _cosine_similarity(a: list[float], b: list[float]) -> float:
@@ -13,9 +14,7 @@ def _cosine_similarity(a: list[float], b: list[float]) -> float:
     return dot / (norm_a * norm_b)
 
 
-async def semantic_search(
-    query_embedding: list[float], top_k: int = 10
-) -> List[Tuple[str, float]]:
+async def semantic_search(query_embedding: list[float], top_k: int = 10) -> List[Tuple[str, float]]:
     embeddings = await store.get_embeddings()
     scores = []
     for recipe_id, data in embeddings.items():
@@ -27,9 +26,7 @@ async def semantic_search(
     return scores[:top_k]
 
 
-async def keyword_search(
-    query: str, index: List[RecipeSummary]
-) -> List[Tuple[str, float]]:
+async def keyword_search(query: str, index: List[RecipeSummary]) -> List[Tuple[str, float]]:
     q = query.lower()
     results = []
     for recipe in index:

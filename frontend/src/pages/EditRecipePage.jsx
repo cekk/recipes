@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { api, hasApiKey } from "../api";
+import { api, isAuthorized } from "../api";
 
 export default function EditRecipePage() {
   const { id } = useParams();
@@ -11,8 +11,8 @@ export default function EditRecipePage() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!hasApiKey()) {
-      setError("Devi aver impostato l'API key nella schermata aggiungi.");
+    if (!isAuthorized()) {
+      setError("Effettua il login con Google per modificare le ricette.");
       setLoading(false);
       return;
     }

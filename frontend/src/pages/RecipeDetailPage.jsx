@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { api, hasApiKey } from "../api";
+import { api, isAuthorized } from "../api";
 
 const DIFFICULTY_COLORS = {
   facile: "bg-green-100 text-green-800",
@@ -94,7 +94,7 @@ export default function RecipeDetailPage() {
           {/* Titolo e azioni */}
           <div className="flex items-start justify-between gap-4 mb-2">
             <h1 className="text-2xl font-bold leading-tight">{recipe.title}</h1>
-            {hasApiKey() && (
+            {isAuthorized() && (
               <div className="flex gap-2 shrink-0">
                 <button
                   onClick={() => navigate(`/recipe/${id}/edit`)}

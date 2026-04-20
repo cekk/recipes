@@ -3,10 +3,11 @@ from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
+    ContextTypes,
     MessageHandler,
     filters,
-    ContextTypes,
 )
+
 from config import get_settings
 
 API_BASE = "http://localhost:8000"
@@ -112,9 +113,7 @@ def run_bot():
     application.add_handler(CommandHandler("start", cmd_start))
     application.add_handler(CommandHandler("list", cmd_list))
     application.add_handler(CommandHandler("search", cmd_search))
-    application.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)
-    )
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     print("Bot Telegram avviato.")
     application.run_polling()

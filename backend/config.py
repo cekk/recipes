@@ -1,5 +1,7 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
+from typing import List
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -13,8 +15,18 @@ class Settings(BaseSettings):
 
     api_key: str
 
+    # Google OAuth
+    google_client_id: str = ""
+    allowed_emails: str = ""  # comma-separated list of allowed emails
+
     telegram_bot_token: str = ""
     telegram_allowed_user_id: int = 0
+
+    @property
+    def allowed_emails_list(self) -> List[str]:
+        if not self.allowed_emails:
+            return []
+        return [e.strip() for e in self.allowed_emails.split(",") if e.strip()]
 
     model_config = SettingsConfigDict(env_file=(".env", "../.env"), env_file_encoding="utf-8", extra="ignore")
 

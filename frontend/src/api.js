@@ -1,21 +1,14 @@
+import { getToken, isLoggedIn, isAuthorized } from "./auth";
+
 const BASE = import.meta.env.VITE_API_URL || "/api";
-
-export function getApiKey() {
-  return localStorage.getItem("api_key") || "";
-}
-
-export function setApiKey(key) {
-  localStorage.setItem("api_key", key);
-}
-
-export function hasApiKey() {
-  return Boolean(getApiKey());
-}
 
 async function request(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...options.headers };
-  const key = getApiKey();
-  if (key) headers["X-API-Key"] = key;
+
+  const token = getToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
 
   const res = await fetch(`${BASE}${path}`, { ...options, headers });
   if (!res.ok) {
@@ -24,6 +17,8 @@ async function request(path, options = {}) {
   }
   return res.json();
 }
+
+export { isLoggedIn, isAuthorized };
 
 export const api = {
   getRecipes: () => request("/recipes"),

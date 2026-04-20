@@ -1,7 +1,9 @@
-import httpx
-import json
 import base64
-from typing import Optional, List
+import json
+from typing import List, Optional
+
+import httpx
+
 from config import get_settings
 from models import Recipe, RecipeSummary
 
@@ -28,9 +30,7 @@ class GitHubStore:
         r.raise_for_status()
         return r.json()
 
-    async def _put_file(
-        self, path: str, content: str, message: str, sha: Optional[str] = None
-    ):
+    async def _put_file(self, path: str, content: str, message: str, sha: Optional[str] = None):
         url = f"{GITHUB_API}/repos/{self.repo}/contents/{path}"
         body = {
             "message": message,
@@ -62,9 +62,7 @@ class GitHubStore:
     async def _save_index(self, summaries: List[RecipeSummary]):
         file = await self._get_file("index.json")
         sha = file["sha"] if file else None
-        content = json.dumps(
-            [s.model_dump() for s in summaries], ensure_ascii=False, indent=2
-        )
+        content = json.dumps([s.model_dump() for s in summaries], ensure_ascii=False, indent=2)
         await self._put_file("index.json", content, "Aggiorna indice ricette", sha)
 
     async def rebuild_index(self) -> int:

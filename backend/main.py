@@ -1,16 +1,15 @@
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
 from typing import List
 
-from config import get_settings
-from models import Recipe, RecipeSummary, URLInput, TextInput, SearchResult
-from github_store import store
-from auth import require_api_key
-from ai_service import extract_recipe, get_recipe_embedding, get_query_embedding
-from search_service import semantic_search, keyword_search
-
 import trafilatura
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+
+from ai_service import extract_recipe, get_query_embedding, get_recipe_embedding
+from auth import _verify_google_token, require_auth
+from github_store import store
+from models import Recipe, RecipeSummary, SearchResult, TextInput, URLInput
+from search_service import keyword_search, semantic_search
 
 app = FastAPI(title="Ricette API", version="1.0.0")
 
@@ -72,25 +71,42 @@ async def get_categories():
     return sorted(cats)
 
 
-# --- Endpoints protetti (richiedono API key) ---
+# --- Auth endpoint ---
 
 
-@app.post(
-    "/recipes/from-url", response_model=Recipe, dependencies=[Depends(require_api_key)]
-)
+@app.get("/auth/me")
+async def auth_me(request: Request):
+    """Verify Google token and return user info."""
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Token assente")
+    token = auth_header[7:]
+    idinfo = _verify_google_token(token)
+    return {
+        "email": idinfo.get("email"),
+        "name": idinfo.get("name"),
+        "picture": idinfo.get("picture"),
+    }
+
+
+# --- Endpoints protetti (richiedono autenticazione) ---
+
+
+@app.post("/recipes/from-url", response_model=Recipe, dependencies=[Depends(require_auth)])
 async def add_recipe_from_url(data: URLInput):
     html = trafilatura.fetch_url(data.url)
     if not html:
         raise HTTPException(status_code=422, detail="Impossibile scaricare la pagina")
-    
+
     text = trafilatura.extract(html, include_images=True, include_links=True)
-    
+
     # --- Fallback e Safety Net per blocchi Ricetta Spesso Ignorati ---
     from bs4 import BeautifulSoup
+
     soup = BeautifulSoup(html, "html.parser")
     # WP Recipe Maker, Recipe Cards generiche
     containers = soup.select(".wprm-recipe-container, [class*='recipe-container'], [class*='recipe-card']")
-    
+
     extra_text = ""
     for c in containers:
         for img in c.find_all("img"):
@@ -102,13 +118,13 @@ async def add_recipe_from_url(data: URLInput):
             href = a.get("href", "")
             if href:
                 a.replace_with(f" [{a.get_text()}]({href}) ")
-        
+
         extra_text += c.get_text(separator="\n", strip=True) + "\n\n"
-        
+
     for script in soup.find_all("script", type="application/ld+json"):
         extra_text += "\n\n--- JSON-LD STRUCTURED DATA ---\n"
         extra_text += script.get_text(strip=True) + "\n"
-        
+
     if extra_text:
         text = (text or "") + "\n\n--- EXTRA CONTENUTI RAW ---\n\n" + extra_text
 
@@ -130,9 +146,7 @@ async def add_recipe_from_url(data: URLInput):
     return recipe
 
 
-@app.post(
-    "/recipes/from-text", response_model=Recipe, dependencies=[Depends(require_api_key)]
-)
+@app.post("/recipes/from-text", response_model=Recipe, dependencies=[Depends(require_auth)])
 async def add_recipe_from_text(data: TextInput):
     extracted = await extract_recipe(data.text)
     extracted["source_type"] = "text"
@@ -148,7 +162,7 @@ async def add_recipe_from_text(data: TextInput):
     return recipe
 
 
-@app.post("/recipes", response_model=Recipe, dependencies=[Depends(require_api_key)])
+@app.post("/recipes", response_model=Recipe, dependencies=[Depends(require_auth)])
 async def add_recipe_manual(recipe: Recipe):
     embedding = await get_recipe_embedding(recipe.model_dump())
 
@@ -163,7 +177,7 @@ async def add_recipe_manual(recipe: Recipe):
 @app.put(
     "/recipes/{recipe_id}",
     response_model=Recipe,
-    dependencies=[Depends(require_api_key)],
+    dependencies=[Depends(require_auth)],
 )
 async def update_recipe(recipe_id: str, recipe: Recipe):
     existing = await store.get_recipe(recipe_id)
@@ -183,7 +197,7 @@ async def update_recipe(recipe_id: str, recipe: Recipe):
     return recipe
 
 
-@app.delete("/recipes/{recipe_id}", dependencies=[Depends(require_api_key)])
+@app.delete("/recipes/{recipe_id}", dependencies=[Depends(require_auth)])
 async def delete_recipe(recipe_id: str):
     deleted = await store.delete_recipe(recipe_id)
     if not deleted:
@@ -196,7 +210,7 @@ async def delete_recipe(recipe_id: str):
     return {"detail": "Ricetta eliminata"}
 
 
-@app.post("/admin/rebuild-index", dependencies=[Depends(require_api_key)])
+@app.post("/admin/rebuild-index", dependencies=[Depends(require_auth)])
 async def rebuild_index():
     count = await store.rebuild_index()
     return {"rebuilt": count}

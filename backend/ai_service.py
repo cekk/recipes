@@ -1,21 +1,20 @@
 import json
 import re
+
 from google import genai
 from google.genai import types
+
 from config import get_settings
 
 
 async def _chat(prompt: str) -> str:
     s = get_settings()
     client = genai.Client(api_key=s.gemini_api_key)
-    
+
     response = await client.aio.models.generate_content(
         model=s.gemini_model,
         contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            temperature=0.1
-        )
+        config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1),
     )
     return response.text
 
@@ -23,11 +22,8 @@ async def _chat(prompt: str) -> str:
 async def _embed(text: str) -> list[float]:
     s = get_settings()
     client = genai.Client(api_key=s.gemini_api_key)
-    
-    response = await client.aio.models.embed_content(
-        model=s.gemini_embed_model,
-        contents=text
-    )
+
+    response = await client.aio.models.embed_content(model=s.gemini_embed_model, contents=text)
     return response.embeddings[0].values
 
 

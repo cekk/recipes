@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, setApiKey, hasApiKey, getApiKey } from "../api";
+import { api, isAuthorized } from "../api";
 
 const TABS = ["URL", "Testo", "Manuale"];
 
@@ -22,7 +22,6 @@ const EMPTY_MANUAL = {
 export default function AddRecipePage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState(0);
-  const [apiKeyInput, setApiKeyInput] = useState(getApiKey());
   const [url, setUrl] = useState("");
   const [text, setText] = useState("");
   const [manual, setManual] = useState(EMPTY_MANUAL);
@@ -30,10 +29,7 @@ export default function AddRecipePage() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  function saveKey() {
-    setApiKey(apiKeyInput.trim());
-    window.location.reload();
-  }
+
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -89,28 +85,14 @@ export default function AddRecipePage() {
     }
   }
 
-  if (!hasApiKey()) {
+  if (!isAuthorized()) {
     return (
       <div className="max-w-md mx-auto mt-12">
-        <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 text-center">
           <h2 className="text-xl font-bold mb-1">Accesso richiesto</h2>
-          <p className="text-stone-500 text-sm mb-4">
-            Inserisci la tua API key per aggiungere ricette.
+          <p className="text-stone-500 text-sm">
+            Effettua il login con Google dal menu in alto per aggiungere ricette.
           </p>
-          <input
-            type="password"
-            value={apiKeyInput}
-            onChange={(e) => setApiKeyInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && saveKey()}
-            placeholder="API key…"
-            className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-amber-400"
-          />
-          <button
-            onClick={saveKey}
-            className="w-full bg-amber-500 hover:bg-amber-600 text-white font-medium py-2 rounded-lg transition-colors"
-          >
-            Salva e continua
-          </button>
         </div>
       </div>
     );

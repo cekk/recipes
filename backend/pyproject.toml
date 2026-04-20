@@ -14,6 +14,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "google-genai>=0.2.0",
     "beautifulsoup4>=4.12.0",
+    "google-auth>=2.0.0",
 ]
 
 [dependency-groups]
@@ -23,5 +24,9 @@ dev = [
     "pytest-asyncio>=0.23.0"
 ]
 
+[tool.ruff]
+line-length = 120
+
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+per-file-ignores = { "import_legacy.py" = ["E501"], "ai_service.py" = ["E501"] }
