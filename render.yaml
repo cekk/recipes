@@ -1,7 +1,7 @@
 services:
   # Backend API (FastAPI)
   - type: web
-    name: ricette-backend
+    name: ricette-backend-cekk
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
@@ -28,7 +28,7 @@ services:
 
   # Frontend (Static React SPA)
   - type: web
-    name: ricette-frontend
+    name: ricette-frontend-cekk
     runtime: static
     rootDir: frontend
     buildCommand: "npm install && npm run build"
@@ -36,7 +36,7 @@ services:
     envVars:
       # URL del backend su Render — sostituisci con il tuo URL reale dopo il primo deploy
       - key: VITE_API_URL
-        value: https://ricette-backend.onrender.com
+        value: https://ricette-backend-cekk.onrender.com
       # Stesso Client ID configurato in Google Cloud Console
       - key: VITE_GOOGLE_CLIENT_ID
         sync: false
