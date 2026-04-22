@@ -28,7 +28,7 @@ services:
 
   # Frontend (Static React SPA)
   - type: web
-    name: ricette-frontend-cekk
+    name: ricette-cekk
     runtime: static
     rootDir: frontend
     buildCommand: "npm install && npm run build"
