@@ -33,7 +33,6 @@ services:
     # Render rispetta .nvmrc, quindi userà Node 22
     buildCommand: "npm --prefix frontend install && npm --prefix frontend run build"
     staticPublishPath: ./frontend/dist
-    plan: free
     envVars:
       # URL del backend su Render — sostituisci con il tuo URL reale dopo il primo deploy
       - key: VITE_API_URL
