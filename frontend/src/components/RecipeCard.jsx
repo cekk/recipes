@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
 
 const DIFFICULTY_COLORS = {
-  facile: "bg-green-100 text-green-800",
-  medio: "bg-amber-100 text-amber-800",
-  difficile: "bg-red-100 text-red-800",
+  facile: "bg-emerald-100 text-emerald-800",
+  medio: "bg-indigo-100 text-indigo-800",
+  difficile: "bg-rose-100 text-rose-800",
 };
 
 function formatTime(minutes) {
@@ -20,45 +20,47 @@ export default function RecipeCard({ recipe }) {
   return (
     <Link
       to={`/recipe/${recipe.id}`}
-      className="block bg-white rounded-xl shadow-sm border border-stone-200 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+      className="group block bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-indigo-100 transition-all duration-300 overflow-hidden ring-1 ring-slate-200 hover:-translate-y-1"
     >
       {recipe.image_urls && recipe.image_urls.length > 0 ? (
         <div 
-          className="bg-stone-200 bg-cover bg-center h-32" 
+          className="bg-slate-100 bg-cover bg-center h-48 group-hover:scale-105 transition-transform duration-500" 
           style={{ backgroundImage: `url(${recipe.image_urls[0]})` }}
         />
       ) : (
-        <div className="bg-gradient-to-br from-amber-400 to-amber-600 h-2" />
+        <div className="bg-gradient-to-br from-indigo-400 to-purple-600 h-32 opacity-90 group-hover:opacity-100 transition-opacity duration-300" />
       )}
-      <div className="p-4">
-        <h2 className="font-semibold text-lg leading-snug mb-1 line-clamp-2">
+      <div className="p-5 flex flex-col h-full bg-white relative z-10">
+        <h2 className="font-bold text-xl leading-tight mb-2 text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-2">
           {recipe.title}
         </h2>
         {recipe.description && (
-          <p className="text-stone-500 text-sm line-clamp-2 mb-3">
+          <p className="text-slate-500 text-sm line-clamp-2 mb-4">
             {recipe.description}
           </p>
         )}
 
-        <div className="flex flex-wrap gap-1.5 mb-3">
+        <div className="flex flex-wrap gap-2 mb-4">
           {recipe.categories.slice(0, 3).map((cat) => (
             <span
               key={cat}
-              className="bg-stone-100 text-stone-600 text-xs px-2 py-0.5 rounded-full"
+              className="bg-slate-100 text-slate-600 text-xs font-medium px-2.5 py-1 rounded-full"
             >
               {cat}
             </span>
           ))}
         </div>
 
-        <div className="flex items-center gap-3 text-xs text-stone-500">
-          {totalTime > 0 && <span>⏱️ {formatTime(totalTime)}</span>}
-          {recipe.servings && <span>👤 {recipe.servings} porz.</span>}
+        <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+          <div className="flex gap-4">
+            {totalTime > 0 && <span className="flex items-center gap-1">⏱️ {formatTime(totalTime)}</span>}
+            {recipe.servings && <span className="flex items-center gap-1">👤 {recipe.servings}</span>}
+          </div>
           {recipe.difficulty && (
             <span
-              className={`px-2 py-0.5 rounded-full font-medium ${
+              className={`px-2.5 py-1 rounded-full ${
                 DIFFICULTY_COLORS[recipe.difficulty] ||
-                "bg-stone-100 text-stone-600"
+                "bg-slate-100 text-slate-600"
               }`}
             >
               {recipe.difficulty}
