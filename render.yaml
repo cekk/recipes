@@ -30,9 +30,9 @@ services:
   - type: web
     name: ricette-frontend
     runtime: static
-    # Render rispetta .nvmrc, quindi userà Node 22
-    buildCommand: "npm --prefix frontend install && npm --prefix frontend run build"
-    staticPublishPath: ./frontend/dist
+    rootDir: frontend
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: ./dist
     envVars:
       # URL del backend su Render — sostituisci con il tuo URL reale dopo il primo deploy
       - key: VITE_API_URL
