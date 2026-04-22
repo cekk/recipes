@@ -19,6 +19,7 @@ class GitHubStore:
             "Authorization": f"Bearer {s.github_token}",
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "cekk-recipes-bot",
         }
 
     async def _get_file(self, path: str) -> Optional[dict]:
