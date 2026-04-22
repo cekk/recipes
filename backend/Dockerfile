@@ -14,4 +14,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["bash", "-c", "uv run uvicorn main:app --host 0.0.0.0 --port 8000 & uv run python bot.py & wait -n"]
