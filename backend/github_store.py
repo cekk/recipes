@@ -15,8 +15,12 @@ class GitHubStore:
         s = get_settings()
         self.repo = s.github_repo
         self.branch = s.github_branch
+        
+        # Pulizia rigorosa del token (spesso il copia-incolla si porta dietro spazi o 'invio')
+        clean_token = s.github_token.strip().strip('"').strip("'")
+        
         self.headers = {
-            "Authorization": f"Bearer {s.github_token}",
+            "Authorization": f"Bearer {clean_token}",
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
             "User-Agent": "cekk-recipes-bot",
@@ -42,6 +46,10 @@ class GitHubStore:
             body["sha"] = sha
         async with httpx.AsyncClient() as client:
             r = await client.put(url, headers=self.headers, json=body)
+            
+        if r.status_code >= 400:
+            print(f"GitHub API Error [{r.status_code}]: {r.text}")
+            
         r.raise_for_status()
 
     async def _delete_file(self, path: str, message: str, sha: str):
