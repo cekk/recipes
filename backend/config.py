@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     telegram_bot_token: str = ""
     telegram_allowed_user_id: int = 0
 
+    # URL pubblico del backend (per webhook Telegram)
+    backend_url: str = ""
+
     @property
     def allowed_emails_list(self) -> list[str]:
         if not self.allowed_emails:

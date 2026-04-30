@@ -12,6 +12,8 @@ from config import get_settings
 
 API_BASE = "http://localhost:8000"
 
+_application: Application | None = None
+
 
 def _auth_headers() -> dict:
     return {"X-API-Key": get_settings().api_key}
@@ -103,19 +105,58 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Errore: {exc}")
 
 
-def run_bot():
+def _build_application() -> Application:
     settings = get_settings()
-    if not settings.telegram_bot_token:
-        print("TELEGRAM_BOT_TOKEN non configurato, bot non avviato.")
-        return
-
     application = Application.builder().token(settings.telegram_bot_token).build()
     application.add_handler(CommandHandler("start", cmd_start))
     application.add_handler(CommandHandler("list", cmd_list))
     application.add_handler(CommandHandler("search", cmd_search))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    return application
 
-    print("Bot Telegram avviato.")
+
+async def setup_webhook(base_url: str):
+    """Initialize bot and set Telegram webhook. Call on FastAPI startup."""
+    global _application
+    settings = get_settings()
+    if not settings.telegram_bot_token:
+        print("TELEGRAM_BOT_TOKEN non configurato, webhook bot non attivato.")
+        return
+
+    _application = _build_application()
+    await _application.initialize()
+
+    webhook_url = f"{base_url}/telegram/webhook"
+    await _application.bot.set_webhook(url=webhook_url)
+    print(f"Bot Telegram webhook impostato su: {webhook_url}")
+
+
+async def shutdown_webhook():
+    """Cleanup on FastAPI shutdown."""
+    global _application
+    if _application:
+        await _application.bot.delete_webhook()
+        await _application.shutdown()
+        _application = None
+
+
+async def process_update(payload: dict):
+    """Process an incoming Telegram update from the webhook endpoint."""
+    if _application is None:
+        return
+    update = Update.de_json(payload, _application.bot)
+    await _application.process_update(update)
+
+
+def run_bot():
+    """Run bot in polling mode (for local development only)."""
+    settings = get_settings()
+    if not settings.telegram_bot_token:
+        print("TELEGRAM_BOT_TOKEN non configurato, bot non avviato.")
+        return
+
+    application = _build_application()
+    print("Bot Telegram avviato (polling).")
     application.run_polling()
 
 

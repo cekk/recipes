@@ -1,5 +1,6 @@
 import ipaddress
 import socket
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
@@ -10,12 +11,25 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from ai_service import extract_recipe
 from auth import _verify_google_token, require_auth
+from bot import process_update, setup_webhook, shutdown_webhook
 from config import get_settings
 from github_store import store
 from models import Recipe, RecipeSummary, SearchResult, TextInput, URLInput
 from search_service import keyword_search
 
-app = FastAPI(title="Ricette API", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: setup Telegram webhook if configured
+    settings = get_settings()
+    if settings.telegram_bot_token and settings.backend_url:
+        await setup_webhook(settings.backend_url)
+    yield
+    # Shutdown: cleanup
+    await shutdown_webhook()
+
+
+app = FastAPI(title="Ricette API", version="1.0.0", lifespan=lifespan)
 
 _ALLOWED_ORIGINS = [
     "http://localhost:5173",
@@ -224,6 +238,13 @@ async def delete_recipe(recipe_id: str):
 async def rebuild_index():
     count = await store.rebuild_index()
     return {"rebuilt": count}
+
+
+@app.post("/telegram/webhook")
+async def telegram_webhook(request: Request):
+    payload = await request.json()
+    await process_update(payload)
+    return {"ok": True}
 
 
 if __name__ == "__main__":
