@@ -81,6 +81,7 @@ Configura le seguenti variabili nel file `.env`:
 | `ALLOWED_ORIGINS` | Origini CORS aggiuntive, separate da virgola | No |
 | `TELEGRAM_BOT_TOKEN` | Token del bot Telegram (da @BotFather) | No |
 | `TELEGRAM_ALLOWED_USER_ID` | Il tuo Telegram User ID (da @userinfobot) | No |
+| `BACKEND_URL` | URL pubblico del backend (per webhook Telegram) | No (sì se usi il bot) |
 
 Per il **frontend** (in `.env` nella root o variabili Render):
 
@@ -146,13 +147,13 @@ Il bot usa `X-API-Key` per autenticarsi (non richiede Google OAuth).
 
 1. Crea un bot con @BotFather → ottieni `TELEGRAM_BOT_TOKEN`
 2. Ottieni il tuo user ID con @userinfobot → `TELEGRAM_ALLOWED_USER_ID`
-3. Avvia il bot:
-   ```bash
-   make bot
-   ```
-4. Manda al bot un URL di una ricetta o del testo libero
+3. Configura `BACKEND_URL` con l'URL pubblico del backend (es. `https://ricette-backend-cekk.onrender.com`)
 
-Il bot gira in polling, non ha bisogno di essere raggiungibile dall'esterno.
+**In produzione (Render)**: il bot si attiva automaticamente con webhook — nessun processo separato. All'avvio del backend, si registra su Telegram e riceve gli update a `POST /telegram/webhook`.
+
+**In locale**: puoi usare `make bot` per testare in modalità polling (non serve `BACKEND_URL`).
+
+4. Manda al bot un URL di una ricetta o del testo libero
 
 ## Script e Utilità
 

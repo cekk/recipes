@@ -21,7 +21,7 @@ cd backend && uv run pytest test_main.py::test_health -v
 # Docker
 make up / make down / make logs
 
-# Telegram bot
+# Telegram bot (local polling mode)
 make bot
 ```
 
