@@ -6,25 +6,29 @@ from google.genai import types
 
 from config import get_settings
 
+_client = None
+
+
+def _get_client() -> genai.Client:
+    global _client
+    if _client is None:
+        s = get_settings()
+        _client = genai.Client(api_key=s.gemini_api_key)
+    return _client
+
 
 async def _chat(prompt: str) -> str:
     s = get_settings()
-    client = genai.Client(api_key=s.gemini_api_key)
+    client = _get_client()
 
     response = await client.aio.models.generate_content(
         model=s.gemini_model,
         contents=prompt,
-        config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1),
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json", temperature=0.1
+        ),
     )
     return response.text
-
-
-async def _embed(text: str) -> list[float]:
-    s = get_settings()
-    client = genai.Client(api_key=s.gemini_api_key)
-
-    response = await client.aio.models.embed_content(model=s.gemini_embed_model, contents=text)
-    return response.embeddings[0].values
 
 
 def _parse_json(text: str) -> dict:
@@ -58,19 +62,3 @@ Testo:
 
     raw = await _chat(prompt)
     return _parse_json(raw)
-
-
-async def get_recipe_embedding(recipe_data: dict) -> list[float]:
-    parts = [recipe_data.get("title", "")]
-    if recipe_data.get("description"):
-        parts.append(recipe_data["description"])
-    if recipe_data.get("categories"):
-        parts.append(" ".join(recipe_data["categories"]))
-    if recipe_data.get("ingredients"):
-        parts.append(" ".join(recipe_data["ingredients"][:10]))
-    text = " | ".join(filter(None, parts))
-    return await _embed(text)
-
-
-async def get_query_embedding(query: str) -> list[float]:
-    return await _embed(query)

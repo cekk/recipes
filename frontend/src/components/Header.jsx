@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router";
 import { isLoggedIn, getUser, logout, renderGoogleButton, initGoogleAuth } from "../auth";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";

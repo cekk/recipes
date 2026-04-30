@@ -1,3 +1,5 @@
+import secrets
+
 from fastapi import HTTPException, Request, Security, status
 from fastapi.security import APIKeyHeader
 from google.auth.transport import requests as google_requests
@@ -17,7 +19,9 @@ def _verify_google_token(token: str) -> dict:
             detail="Google OAuth non configurato sul server",
         )
     try:
-        idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), settings.google_client_id)
+        idinfo = id_token.verify_oauth2_token(
+            token, google_requests.Request(), settings.google_client_id
+        )
         email = idinfo.get("email", "")
         allowed = settings.allowed_emails_list
         if allowed and email not in allowed:
@@ -41,7 +45,7 @@ async def require_auth(
     settings = get_settings()
 
     # 1. Try API key first (for bot, scripts, backward compat)
-    if api_key and api_key == settings.api_key:
+    if api_key and secrets.compare_digest(api_key, settings.api_key):
         return api_key
 
     # 2. Try Google OAuth Bearer token

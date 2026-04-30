@@ -1,25 +1,62 @@
+import ipaddress
+import socket
 from datetime import datetime, timezone
-from typing import List
+from urllib.parse import urlparse
 
 import trafilatura
+from bs4 import BeautifulSoup
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from ai_service import extract_recipe, get_query_embedding, get_recipe_embedding
+from ai_service import extract_recipe
 from auth import _verify_google_token, require_auth
+from config import get_settings
 from github_store import store
 from models import Recipe, RecipeSummary, SearchResult, TextInput, URLInput
-from search_service import keyword_search, semantic_search
+from search_service import keyword_search
 
 app = FastAPI(title="Ricette API", version="1.0.0")
 
+_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+_settings_origins = get_settings().allowed_origins
+if _settings_origins:
+    _ALLOWED_ORIGINS.extend(
+        o.strip() for o in _settings_origins.split(",") if o.strip()
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def _validate_url(url: str) -> str:
+    """Validate URL to prevent SSRF attacks."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(
+            status_code=422, detail="Solo URL HTTP/HTTPS sono supportati"
+        )
+    hostname = parsed.hostname
+    if not hostname:
+        raise HTTPException(status_code=422, detail="URL non valido")
+    try:
+        resolved = socket.getaddrinfo(hostname, None)
+        for _, _, _, _, addr in resolved:
+            ip = ipaddress.ip_address(addr[0])
+            if ip.is_private or ip.is_loopback or ip.is_reserved:
+                raise HTTPException(
+                    status_code=422, detail="URL verso indirizzi privati non consentiti"
+                )
+    except socket.gaierror:
+        raise HTTPException(status_code=422, detail="Impossibile risolvere l'hostname")
+    return url
 
 
 # --- Endpoints pubblici ---
@@ -30,7 +67,7 @@ async def health():
     return {"status": "ok"}
 
 
-@app.get("/recipes", response_model=List[RecipeSummary])
+@app.get("/recipes", response_model=list[RecipeSummary])
 async def list_recipes():
     return await store.get_index()
 
@@ -43,17 +80,13 @@ async def get_recipe(recipe_id: str):
     return recipe
 
 
-@app.get("/search", response_model=List[SearchResult])
-async def search(q: str, semantic: bool = True, limit: int = 10):
+@app.get("/search", response_model=list[SearchResult])
+async def search(q: str, limit: int = 10):
     index = await store.get_index()
     index_map = {r.id: r for r in index}
 
-    if semantic:
-        query_emb = await get_query_embedding(q)
-        results = await semantic_search(query_emb, top_k=limit)
-    else:
-        results = await keyword_search(q, index)
-        results = results[:limit]
+    results = await keyword_search(q, index)
+    results = results[:limit]
 
     output = []
     for recipe_id, score in results:
@@ -92,8 +125,12 @@ async def auth_me(request: Request):
 # --- Endpoints protetti (richiedono autenticazione) ---
 
 
-@app.post("/recipes/from-url", response_model=Recipe, dependencies=[Depends(require_auth)])
+@app.post(
+    "/recipes/from-url", response_model=Recipe, dependencies=[Depends(require_auth)]
+)
 async def add_recipe_from_url(data: URLInput):
+    _validate_url(data.url)
+
     html = trafilatura.fetch_url(data.url)
     if not html:
         raise HTTPException(status_code=422, detail="Impossibile scaricare la pagina")
@@ -101,11 +138,11 @@ async def add_recipe_from_url(data: URLInput):
     text = trafilatura.extract(html, include_images=True, include_links=True)
 
     # --- Fallback e Safety Net per blocchi Ricetta Spesso Ignorati ---
-    from bs4 import BeautifulSoup
-
     soup = BeautifulSoup(html, "html.parser")
     # WP Recipe Maker, Recipe Cards generiche
-    containers = soup.select(".wprm-recipe-container, [class*='recipe-container'], [class*='recipe-card']")
+    containers = soup.select(
+        ".wprm-recipe-container, [class*='recipe-container'], [class*='recipe-card']"
+    )
 
     extra_text = ""
     for c in containers:
@@ -136,41 +173,25 @@ async def add_recipe_from_url(data: URLInput):
     extracted["source_type"] = "url"
 
     recipe = Recipe(**extracted)
-    embedding = await get_recipe_embedding(extracted)
-
     await store.save_recipe(recipe)
-    embeddings = await store.get_embeddings()
-    embeddings[recipe.id] = {"title": recipe.title, "embedding": embedding}
-    await store.save_embeddings(embeddings)
-
     return recipe
 
 
-@app.post("/recipes/from-text", response_model=Recipe, dependencies=[Depends(require_auth)])
+@app.post(
+    "/recipes/from-text", response_model=Recipe, dependencies=[Depends(require_auth)]
+)
 async def add_recipe_from_text(data: TextInput):
     extracted = await extract_recipe(data.text)
     extracted["source_type"] = "text"
 
     recipe = Recipe(**extracted)
-    embedding = await get_recipe_embedding(extracted)
-
     await store.save_recipe(recipe)
-    embeddings = await store.get_embeddings()
-    embeddings[recipe.id] = {"title": recipe.title, "embedding": embedding}
-    await store.save_embeddings(embeddings)
-
     return recipe
 
 
 @app.post("/recipes", response_model=Recipe, dependencies=[Depends(require_auth)])
 async def add_recipe_manual(recipe: Recipe):
-    embedding = await get_recipe_embedding(recipe.model_dump())
-
     await store.save_recipe(recipe)
-    embeddings = await store.get_embeddings()
-    embeddings[recipe.id] = {"title": recipe.title, "embedding": embedding}
-    await store.save_embeddings(embeddings)
-
     return recipe
 
 
@@ -187,13 +208,7 @@ async def update_recipe(recipe_id: str, recipe: Recipe):
     recipe.id = recipe_id
     recipe.updated_at = datetime.now(timezone.utc).isoformat()
 
-    embedding = await get_recipe_embedding(recipe.model_dump())
     await store.save_recipe(recipe)
-
-    embeddings = await store.get_embeddings()
-    embeddings[recipe_id] = {"title": recipe.title, "embedding": embedding}
-    await store.save_embeddings(embeddings)
-
     return recipe
 
 
@@ -202,11 +217,6 @@ async def delete_recipe(recipe_id: str):
     deleted = await store.delete_recipe(recipe_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Ricetta non trovata")
-
-    embeddings = await store.get_embeddings()
-    embeddings.pop(recipe_id, None)
-    await store.save_embeddings(embeddings)
-
     return {"detail": "Ricetta eliminata"}
 
 

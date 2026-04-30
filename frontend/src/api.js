@@ -23,8 +23,7 @@ export { isLoggedIn, isAuthorized };
 export const api = {
   getRecipes: () => request("/recipes"),
   getRecipe: (id) => request(`/recipes/${id}`),
-  search: (q, semantic = true) =>
-    request(`/search?q=${encodeURIComponent(q)}&semantic=${semantic}`),
+  search: (q) => request(`/search?q=${encodeURIComponent(q)}`),
   getCategories: () => request("/categories"),
   addFromUrl: (url) =>
     request("/recipes/from-url", {

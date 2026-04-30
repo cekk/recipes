@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 const DIFFICULTY_COLORS = {
   facile: "bg-emerald-100 text-emerald-800",

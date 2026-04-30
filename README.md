@@ -7,7 +7,7 @@ App web personale per raccogliere, organizzare e cercare ricette.
 - **Salva ricette da URL** — incolla il link di una ricetta, l'AI (Google Gemini) estrae automaticamente titolo, ingredienti, procedimento, tempi e categorie
 - **Salva da testo libero** — copia e incolla testo qualsiasi, l'AI lo struttura
 - **Inserimento manuale** — form completo per ricette proprie
-- **Ricerca semantica** — cerca per concetto ("cosa faccio con le zucchine") oltre che per parola chiave, usando embeddings cloud base (`gemini-embedding-001`)
+- **Ricerca per parola chiave** — cerca per titolo, descrizione o categoria
 - **Filtro per categoria** — etichette assegnate automaticamente dall'AI
 - **Immagini e Video** — immagini estratte dalla pagina originale, galleria nella pagina dettaglio
 - **Bot Telegram** — condividi un URL o testo al bot, la ricetta viene salvata senza aprire il browser
@@ -15,9 +15,9 @@ App web personale per raccogliere, organizzare e cercare ricette.
 
 ## Tech Stack
 
-- **Backend**: Python 3 / FastAPI
-- **Frontend**: React + Vite + Tailwind CSS
-- **AI**: Google Gemini API (`gemini-2.5-flash` + `gemini-embedding-001`) — Estrazione ed embeddings 100% in cloud tramite account gratuito
+- **Backend**: Python 3.12 / FastAPI
+- **Frontend**: React 19 + Vite 6 + Tailwind CSS 4
+- **AI**: Google Gemini API (`gemini-2.5-flash`) — Estrazione ricette 100% in cloud tramite account gratuito
 - **Auth**: Google OAuth (Identity Services) — login con Gmail, nessuna password
 - **Storage**: GitHub API (file JSON versionati)
 - **Deploy**: Render.com (free tier) — backend Docker + frontend statico
@@ -34,7 +34,7 @@ Render Static Site (frontend React)
   ▼
 Render Web Service (backend FastAPI)
   │ verifica Google token / API key
-  ├──► Google Gemini API  (estrazione + embeddings)
+  ├──► Google Gemini API  (estrazione ricette)
   └──► GitHub API         (storage ricette JSON)
 ```
 
@@ -78,6 +78,7 @@ Configura le seguenti variabili nel file `.env`:
 | `API_KEY` | Chiave segreta per bot Telegram e script | Sì |
 | `GOOGLE_CLIENT_ID` | Client ID OAuth da Google Cloud Console | Sì (per il login web) |
 | `ALLOWED_EMAILS` | Email autorizzate a scrivere, separate da virgola | Sì (es. `tuo@gmail.com`) |
+| `ALLOWED_ORIGINS` | Origini CORS aggiuntive, separate da virgola | No |
 | `TELEGRAM_BOT_TOKEN` | Token del bot Telegram (da @BotFather) | No |
 | `TELEGRAM_ALLOWED_USER_ID` | Il tuo Telegram User ID (da @userinfobot) | No |
 
@@ -161,7 +162,6 @@ make install         # installa dipendenze
 make dev             # backend + frontend in sviluppo
 make lint            # ruff check sul backend
 make test            # pytest backend
-make rebuild-index   # ricostruisce l'indice semantico da GitHub
 make bot             # avvia bot Telegram
 ```
 
@@ -173,7 +173,7 @@ Se hai ricette in formato YAML (es. da un vecchio progetto):
 cd backend && uv run python import_legacy.py
 ```
 
-Lo script recupera i file YAML da `recipes-old` su GitHub, li passa a Gemini per la ristrutturazione, e salva tutto nel nuovo formato JSON con embeddings.
+Lo script recupera i file YAML da `recipes-old` su GitHub, li passa a Gemini per la ristrutturazione, e salva tutto nel nuovo formato JSON.
 
 ## API
 
@@ -186,7 +186,7 @@ curl -X POST https://ricette-backend.onrender.com/recipes/from-url \
   -H "Content-Type: application/json" \
   -d '{"url": "https://www.giallozafferano.it/..."}'
 
-# Ricerca semantica (pubblica)
+# Ricerca (pubblica)
 curl "https://ricette-backend.onrender.com/search?q=pasta+veloce"
 ```
 
@@ -202,8 +202,3 @@ Il token Google scade dopo ~1 ora. Esci e rifai il login. Il frontend controlla 
 
 ### GitHub token scaduto
 I PAT Classic scadono dopo 30/90 giorni. Rinnovalo su GitHub → Settings → Developer settings.
-
-### Ricerca semantica non trova nulla
-```bash
-make rebuild-index
-```

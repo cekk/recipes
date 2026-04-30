@@ -1,6 +1,5 @@
 import base64
 import json
-from typing import List, Optional
 
 import httpx
 
@@ -15,27 +14,29 @@ class GitHubStore:
         s = get_settings()
         self.repo = s.github_repo
         self.branch = s.github_branch
-        
+
         # Pulizia rigorosa del token (spesso il copia-incolla si porta dietro spazi o 'invio')
         clean_token = s.github_token.strip().strip('"').strip("'")
-        
+
         self.headers = {
             "Authorization": f"Bearer {clean_token}",
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
             "User-Agent": "cekk-recipes-bot",
         }
+        self._client = httpx.AsyncClient(headers=self.headers, timeout=30.0)
 
-    async def _get_file(self, path: str) -> Optional[dict]:
+    async def _get_file(self, path: str) -> dict | None:
         url = f"{GITHUB_API}/repos/{self.repo}/contents/{path}"
-        async with httpx.AsyncClient() as client:
-            r = await client.get(url, headers=self.headers, params={"ref": self.branch})
+        r = await self._client.get(url, params={"ref": self.branch})
         if r.status_code == 404:
             return None
         r.raise_for_status()
         return r.json()
 
-    async def _put_file(self, path: str, content: str, message: str, sha: Optional[str] = None):
+    async def _put_file(
+        self, path: str, content: str, message: str, sha: str | None = None
+    ):
         url = f"{GITHUB_API}/repos/{self.repo}/contents/{path}"
         body = {
             "message": message,
@@ -44,41 +45,40 @@ class GitHubStore:
         }
         if sha:
             body["sha"] = sha
-        async with httpx.AsyncClient() as client:
-            r = await client.put(url, headers=self.headers, json=body)
-            
+        r = await self._client.put(url, json=body)
+
         if r.status_code >= 400:
             print(f"GitHub API Error [{r.status_code}]: {r.text}")
-            
+
         r.raise_for_status()
 
     async def _delete_file(self, path: str, message: str, sha: str):
         url = f"{GITHUB_API}/repos/{self.repo}/contents/{path}"
         body = {"message": message, "sha": sha, "branch": self.branch}
-        async with httpx.AsyncClient() as client:
-            r = await client.request("DELETE", url, headers=self.headers, json=body)
+        r = await self._client.request("DELETE", url, json=body)
         r.raise_for_status()
 
     # --- Index ---
 
-    async def get_index(self) -> List[RecipeSummary]:
+    async def get_index(self) -> list[RecipeSummary]:
         file = await self._get_file("index.json")
         if not file:
             return []
         data = json.loads(base64.b64decode(file["content"]).decode())
         return [RecipeSummary(**r) for r in data]
 
-    async def _save_index(self, summaries: List[RecipeSummary]):
+    async def _save_index(self, summaries: list[RecipeSummary]):
         file = await self._get_file("index.json")
         sha = file["sha"] if file else None
-        content = json.dumps([s.model_dump() for s in summaries], ensure_ascii=False, indent=2)
+        content = json.dumps(
+            [s.model_dump() for s in summaries], ensure_ascii=False, indent=2
+        )
         await self._put_file("index.json", content, "Aggiorna indice ricette", sha)
 
     async def rebuild_index(self) -> int:
         """Ricostruisce l'indice leggendo tutti i file individuali delle ricette."""
         url = f"{GITHUB_API}/repos/{self.repo}/contents/recipes"
-        async with httpx.AsyncClient() as client:
-            r = await client.get(url, headers=self.headers, params={"ref": self.branch})
+        r = await self._client.get(url, params={"ref": self.branch})
         if r.status_code == 404:
             return 0
         r.raise_for_status()
@@ -95,7 +95,7 @@ class GitHubStore:
 
     # --- Recipes ---
 
-    async def get_recipe(self, recipe_id: str) -> Optional[Recipe]:
+    async def get_recipe(self, recipe_id: str) -> Recipe | None:
         file = await self._get_file(f"recipes/{recipe_id}.json")
         if not file:
             return None
@@ -129,20 +129,6 @@ class GitHubStore:
         index = [s for s in index if s.id != recipe_id]
         await self._save_index(index)
         return True
-
-    # --- Embeddings ---
-
-    async def get_embeddings(self) -> dict:
-        file = await self._get_file("embeddings.json")
-        if not file:
-            return {}
-        return json.loads(base64.b64decode(file["content"]).decode())
-
-    async def save_embeddings(self, embeddings: dict):
-        existing = await self._get_file("embeddings.json")
-        sha = existing["sha"] if existing else None
-        content = json.dumps(embeddings, ensure_ascii=False)
-        await self._put_file("embeddings.json", content, "Aggiorna embeddings", sha)
 
 
 store = GitHubStore()

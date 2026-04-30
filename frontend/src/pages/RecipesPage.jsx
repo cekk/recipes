@@ -29,14 +29,14 @@ export default function RecipesPage() {
       : base;
   }, [allRecipes, searchResults, selectedCat]);
 
-  async function handleSearch(query, semantic) {
+  async function handleSearch(query) {
     if (!query) {
       setSearchResults(null);
       return;
     }
     setSearching(true);
     try {
-      const results = await api.search(query, semantic);
+      const results = await api.search(query);
       setSearchResults(results.map((r) => r.recipe));
     } catch (e) {
       setError(e.message);
@@ -64,7 +64,9 @@ export default function RecipesPage() {
     return (
       <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-red-100 max-w-2xl mx-auto mt-10">
         <p className="text-red-500 text-5xl mb-4">⚠️</p>
-        <p className="text-slate-900 text-xl font-bold mb-2">Errore di caricamento</p>
+        <p className="text-slate-900 text-xl font-bold mb-2">
+          Errore di caricamento
+        </p>
         <p className="text-red-600 font-medium mb-1">{error}</p>
         <p className="text-slate-500 text-sm">
           Controlla che il backend sia raggiungibile.
@@ -78,12 +80,16 @@ export default function RecipesPage() {
       {/* Hero Section */}
       <section className="text-center mt-8 mb-4 max-w-4xl mx-auto w-full px-4">
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight mb-6">
-          Cosa ti va di <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600">cucinare</span> oggi?
+          Cosa ti va di{" "}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600">
+            cucinare
+          </span>{" "}
+          oggi?
         </h1>
         <p className="text-lg sm:text-xl text-slate-600 mb-10 max-w-2xl mx-auto">
-          Cerca tra le tue ricette preferite per ingrediente, tempo o usa l'AI per farti suggerire qualcosa di speciale.
+          Cerca tra le tue ricette preferite per ingrediente, nome o categoria.
         </p>
-        
+
         <div className="relative">
           <div className="absolute inset-x-0 -top-10 -bottom-10 bg-indigo-50 blur-3xl -z-10 rounded-full opacity-50"></div>
           <SearchBar onSearch={handleSearch} loading={searching} />
@@ -145,8 +151,12 @@ export default function RecipesPage() {
         {displayed.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-slate-100 mt-8">
             <p className="text-5xl mb-4 opacity-50">🍽️</p>
-            <p className="text-xl font-bold text-slate-900 mb-2">Nessuna ricetta trovata</p>
-            <p className="text-slate-500">Prova a cambiare i termini di ricerca o la categoria.</p>
+            <p className="text-xl font-bold text-slate-900 mb-2">
+              Nessuna ricetta trovata
+            </p>
+            <p className="text-slate-500">
+              Prova a cambiare i termini di ricerca o la categoria.
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">

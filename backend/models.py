@@ -1,7 +1,6 @@
 import re
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -39,16 +38,16 @@ class RecipeSummary(BaseModel):
     id: str
     title: str
     slug: str
-    description: Optional[str] = None
-    categories: List[str] = []
-    prep_time: Optional[int] = None
-    cook_time: Optional[int] = None
-    servings: Optional[int] = None
-    difficulty: Optional[str] = None
-    source_url: Optional[str] = None
+    description: str | None = None
+    categories: list[str] = []
+    prep_time: int | None = None
+    cook_time: int | None = None
+    servings: int | None = None
+    difficulty: str | None = None
+    source_url: str | None = None
     source_type: str = "manual"
-    image_urls: List[str] = []
-    video_urls: List[str] = []
+    image_urls: list[str] = []
+    video_urls: list[str] = []
     created_at: str
 
 
@@ -56,21 +55,23 @@ class Recipe(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     title: str
     slug: str = ""
-    description: Optional[str] = None
-    ingredients: List[str] = []
-    steps: List[str] = []
-    prep_time: Optional[int] = None
-    cook_time: Optional[int] = None
-    servings: Optional[int] = None
-    difficulty: Optional[str] = None
-    categories: List[str] = []
-    notes: Optional[str] = None
-    source_url: Optional[str] = None
+    description: str | None = None
+    ingredients: list[str] = []
+    steps: list[str] = []
+    prep_time: int | None = None
+    cook_time: int | None = None
+    servings: int | None = None
+    difficulty: str | None = None
+    categories: list[str] = []
+    notes: str | None = None
+    source_url: str | None = None
     source_type: str = "manual"
-    image_urls: List[str] = []
-    video_urls: List[str] = []
-    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    updated_at: Optional[str] = None
+    image_urls: list[str] = []
+    video_urls: list[str] = []
+    created_at: str = Field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
+    updated_at: str | None = None
 
     def model_post_init(self, __context):
         if not self.slug:
