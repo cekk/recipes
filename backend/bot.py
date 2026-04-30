@@ -127,6 +127,7 @@ async def setup_webhook(base_url: str):
 
     _application = _build_application()
     await _application.initialize()
+    await _application.start()
 
     webhook_url = f"{base_url}/telegram/webhook"
     await _application.bot.set_webhook(url=webhook_url)
@@ -138,6 +139,7 @@ async def shutdown_webhook():
     global _application
     if _application:
         await _application.bot.delete_webhook()
+        await _application.stop()
         await _application.shutdown()
         _application = None
 
