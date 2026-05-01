@@ -101,6 +101,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Difficoltà: {recipe.get('difficulty', 'N/D')}",
             parse_mode="Markdown",
         )
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 409:
+            await update.message.reply_text("⚠️ Questa ricetta è già presente nel database.")
+        else:
+            await update.message.reply_text(f"❌ Errore API: {exc.response.status_code} - {exc.response.text}")
     except Exception as exc:
         await update.message.reply_text(f"❌ Errore: {exc}")
 

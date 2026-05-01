@@ -51,7 +51,7 @@ FastAPI backend
 
 ## Key Conventions
 
-**README.md is the source of truth.** Update it when adding env vars, Makefile targets, API endpoints, or architecture changes.
+**README.md is the source of truth.** Update it when adding env vars, Makefile targets, API endpoints, or architecture changes (any structural changes). It must ALWAYS be in English.
 
 **Auth**: Two accepted methods on protected endpoints (`require_auth` dependency):
 1. `X-API-Key: <API_KEY>` — for bot and scripts

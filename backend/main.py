@@ -145,6 +145,12 @@ async def auth_me(request: Request):
 async def add_recipe_from_url(data: URLInput):
     _validate_url(data.url)
 
+    # Check if URL already exists
+    index = await store.get_index()
+    for summary in index:
+        if summary.source_url and summary.source_url.strip("/") == data.url.strip("/"):
+            raise HTTPException(status_code=409, detail="Ricetta già presente (URL duplicato)")
+
     html = trafilatura.fetch_url(data.url)
     if not html:
         raise HTTPException(status_code=422, detail="Impossibile scaricare la pagina")
@@ -199,6 +205,13 @@ async def add_recipe_from_text(data: TextInput):
     extracted["source_type"] = "text"
 
     recipe = Recipe(**extracted)
+
+    # Controlla duplicati per titolo (slug)
+    index = await store.get_index()
+    for summary in index:
+        if summary.slug == recipe.slug:
+            raise HTTPException(status_code=409, detail="Ricetta già presente (Titolo duplicato)")
+
     await store.save_recipe(recipe)
     return recipe
 

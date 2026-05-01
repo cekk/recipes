@@ -1,28 +1,29 @@
 # 🍽️ Ricette
 
-App web personale per raccogliere, organizzare e cercare ricette.
+Personal web app to collect, organize, and search for recipes.
 
-## Funzionalità
+## Features
 
-- **Salva ricette da URL** — incolla il link di una ricetta, l'AI (Google Gemini) estrae automaticamente titolo, ingredienti, procedimento, tempi e categorie
-- **Salva da testo libero** — copia e incolla testo qualsiasi, l'AI lo struttura
-- **Inserimento manuale** — form completo per ricette proprie
-- **Ricerca per parola chiave** — cerca per titolo, descrizione o categoria
-- **Filtro per categoria** — etichette assegnate automaticamente dall'AI
-- **Immagini e Video** — immagini estratte dalla pagina originale, galleria nella pagina dettaglio
-- **Bot Telegram** — condividi un URL o testo al bot, la ricetta viene salvata senza aprire il browser
-- **Storage su GitHub** — ogni ricetta è un file JSON versionato; backup e history gratuiti
+- **Save recipes from URL** — paste a recipe link, and the AI (Google Gemini) automatically extracts the title, ingredients, instructions, prep times, and categories.
+- **Save from free text** — copy and paste any text, and the AI structures it.
+- **Manual entry** — complete form for your own recipes.
+- **Keyword search** — search by title, description, or category.
+- **Category filter** — labels automatically assigned by the AI.
+- **Images and Videos** — images extracted from the original page, displayed in a gallery on the detail page.
+- **Telegram Bot** — share a URL or text with the bot, and the recipe is saved without opening the browser.
+- **GitHub Storage** — each recipe is a versioned JSON file; free backup and history.
+- **Duplicate Prevention** — automatically checks URLs and titles to prevent the insertion of already existing recipes (both from the web and Telegram).
 
 ## Tech Stack
 
 - **Backend**: Python 3.12 / FastAPI
 - **Frontend**: React 19 + Vite 6 + Tailwind CSS 4
-- **AI**: Google Gemini API (`gemini-2.5-flash`) — Estrazione ricette 100% in cloud tramite account gratuito
-- **Auth**: Google OAuth (Identity Services) — login con Gmail, nessuna password
-- **Storage**: GitHub API (file JSON versionati)
-- **Deploy**: Render.com (free tier) — backend Docker + frontend statico
+- **AI**: Google Gemini API (`gemini-2.5-flash`) — 100% cloud recipe extraction via a free account.
+- **Auth**: Google OAuth (Identity Services) — login with Gmail, no password required.
+- **Storage**: GitHub API (versioned JSON files).
+- **Deploy**: Render.com (free tier) — Docker backend + static frontend.
 
-## Architettura
+## Architecture
 
 ```text
 Browser
@@ -30,176 +31,185 @@ Browser
   │ Bearer token → /api/*
   ▼
 Render Static Site (frontend React)
-  │ VITE_API_URL → backend diretto
+  │ VITE_API_URL → direct backend
   ▼
 Render Web Service (backend FastAPI)
-  │ verifica Google token / API key
-  ├──► Google Gemini API  (estrazione ricette)
-  └──► GitHub API         (storage ricette JSON)
+  │ verify Google token / API key
+  ├──► Google Gemini API  (recipe extraction)
+  └──► GitHub API         (JSON recipe storage)
 ```
 
-## Prerequisiti
+## Prerequisites
 
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) (backend)
-- [Node.js 22+](https://nodejs.org/) via nvm (frontend) — il progetto include `.nvmrc`
-- API Key gratuita per **Google Gemini** su [Google AI Studio](https://aistudio.google.com/app/apikey)
-- Un repo GitHub dedicato per le ricette (può essere privato)
-- Un [GitHub PAT](https://github.com/settings/tokens) con scope `Contents: Read & Write`
+- [Node.js 22+](https://nodejs.org/) via nvm (frontend) — the project includes an `.nvmrc` file
+- Free API Key for **Google Gemini** from [Google AI Studio](https://aistudio.google.com/app/apikey)
+- A dedicated GitHub repo for the recipes (can be private)
+- A [GitHub PAT](https://github.com/settings/tokens) with `Contents: Read & Write` scope
 
-## Setup iniziale
+## Initial Setup
 
-### 1. Clona e configura le variabili d'ambiente
+### 1. Clone and configure environment variables
 
 ```bash
-git clone <questo-repo>
+git clone <this-repo>
 cd ricette
 cp env.example .env
 ```
 
-### 2. Crea le credenziali Google OAuth
+### 2. Create Google OAuth credentials
 
-1. Vai su [Google Cloud Console → Credenziali](https://console.cloud.google.com/apis/credentials)
-2. Crea un progetto (o usa uno esistente)
-3. **Crea credenziali → ID client OAuth 2.0 → Applicazione web**
-4. Origini JavaScript autorizzate:
-   - `http://localhost:5173` (sviluppo locale)
-   - `https://ricette-frontend.onrender.com` (produzione — aggiungi dopo il deploy)
-5. Copia il **Client ID** (formato: `xxxxxxxxxx.apps.googleusercontent.com`)
+1. Go to [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials)
+2. Create a project (or use an existing one)
+3. **Create credentials → OAuth client ID → Web application**
+4. Authorized JavaScript origins:
+   - `http://localhost:5173` (local development)
+   - `https://ricette-frontend.onrender.com` (production — add after deploy)
+5. Copy the **Client ID** (format: `xxxxxxxxxx.apps.googleusercontent.com`)
 
-### 3. Variabili d'Ambiente
+### 3. Environment Variables
 
-Configura le seguenti variabili nel file `.env`:
+Configure the following variables in your `.env` file:
 
-| Variabile | Descrizione | Obbligatoria |
+| Variable | Description | Required |
 |-----------|-------------|--------------|
-| `GITHUB_TOKEN` | PAT GitHub con permesso `Contents: Read & Write` | Sì |
-| `GITHUB_REPO` | Repository dove salvare i JSON (es. `utente/ricette-data`) | Sì |
-| `GEMINI_API_KEY` | Chiave API Google Gemini | Sì |
-| `API_KEY` | Chiave segreta per bot Telegram e script | Sì |
-| `GOOGLE_CLIENT_ID` | Client ID OAuth da Google Cloud Console | Sì (per il login web) |
-| `ALLOWED_EMAILS` | Email autorizzate a scrivere, separate da virgola | Sì (es. `tuo@gmail.com`) |
-| `ALLOWED_ORIGINS` | Origini CORS aggiuntive, separate da virgola | No |
-| `TELEGRAM_BOT_TOKEN` | Token del bot Telegram (da @BotFather) | No |
-| `TELEGRAM_ALLOWED_USER_ID` | Il tuo Telegram User ID (da @userinfobot) | No |
-| `BACKEND_URL` | URL pubblico del backend (per webhook Telegram) | No (sì se usi il bot) |
+| `GITHUB_TOKEN` | GitHub PAT with `Contents: Read & Write` permissions | Yes |
+| `GITHUB_REPO` | Repository where JSON files will be saved (e.g. `user/recipes-data`) | Yes |
+| `GEMINI_API_KEY` | Google Gemini API Key | Yes |
+| `API_KEY` | Secret key for Telegram bot and scripts (generate a random string, e.g., `openssl rand -hex 16`) | Yes |
+| `GOOGLE_CLIENT_ID` | OAuth Client ID from Google Cloud Console | Yes (for web login) |
+| `ALLOWED_EMAILS` | Emails authorized to write, separated by commas | Yes (e.g. `you@gmail.com`) |
+| `ALLOWED_ORIGINS` | Additional CORS origins, separated by commas | No |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot token (from @BotFather) | No |
+| `TELEGRAM_ALLOWED_USER_ID` | Your Telegram User ID (from @userinfobot) | No |
+| `BACKEND_URL` | Public backend URL (for Telegram webhooks) | No (yes if using the bot) |
 
-Per il **frontend** (in `.env` nella root o variabili Render):
+For the **frontend** (in `.env` in the root or Render variables):
 
-| Variabile | Descrizione |
+| Variable | Description |
 |-----------|-------------|
-| `VITE_GOOGLE_CLIENT_ID` | Stesso Client ID OAuth (letto da Vite al build) |
-| `VITE_API_URL` | URL del backend (solo in produzione, es. `https://ricette-backend.onrender.com`) |
+| `VITE_GOOGLE_CLIENT_ID` | Same OAuth Client ID (read by Vite during build) |
+| `VITE_API_URL` | Backend URL (only in production, e.g. `https://ricette-backend.onrender.com`) |
 
-### 4. Installa le dipendenze e avvia in locale
+### 4. Install dependencies and run locally
 
 ```bash
-# Usa nvm per attivare Node 22
+# Use nvm to activate Node 22
 nvm use
 
 make install   # backend (uv) + frontend (npm)
-make dev       # avvia backend e frontend in parallelo
+make dev       # start backend and frontend in parallel
 ```
 
-- Backend: `http://localhost:8000` (docs su `/docs`)
+- Backend: `http://localhost:8000` (docs at `/docs`)
 - Frontend: `http://localhost:5173`
 
-Il login Google funziona in locale se `http://localhost:5173` è tra le origini autorizzate nel tuo Client ID.
+Google login works locally if `http://localhost:5173` is among the authorized origins in your Client ID.
 
-## Deploy su Render
+## Deploy to Render
 
-Il file `render.yaml` configura tutto automaticamente.
+The `render.yaml` file configures everything automatically.
 
-### Prima volta
+### First Time
 
-1. Crea un account su [render.com](https://render.com) (gratis, nessuna carta)
-2. **New → Blueprint** e collega questo repository
-3. Render legge `render.yaml` e crea i due servizi
-4. Nella dashboard, imposta le **variabili d'ambiente** segnate come `sync: false`:
-   - Nel backend: `GITHUB_TOKEN`, `GITHUB_REPO`, `GEMINI_API_KEY`, `API_KEY`, `GOOGLE_CLIENT_ID`, `ALLOWED_EMAILS`
-   - Nel frontend: `VITE_GOOGLE_CLIENT_ID`
-5. **Importante**: dopo il primo deploy, copia l'URL del backend (es. `https://ricette-backend.onrender.com`) e:
-   - Aggiornalo in `render.yaml` → `VITE_API_URL`
-   - Aggiungilo alle origini autorizzate nel Client ID Google
-   - Aggiungi anche l'URL del frontend alle origini Google
+1. Create an account on [render.com](https://render.com) (free, no credit card required)
+2. **New → Blueprint** and connect this repository
+3. Render reads `render.yaml` and creates both services
+4. In the dashboard, set the **environment variables** marked as `sync: false`:
+   - In the backend: `GITHUB_TOKEN`, `GITHUB_REPO`, `GEMINI_API_KEY`, `API_KEY`, `GOOGLE_CLIENT_ID`, `ALLOWED_EMAILS`, `TELEGRAM_BOT_TOKEN`
+   - In the frontend: `VITE_GOOGLE_CLIENT_ID`
+5. **Important**: the `render.yaml` file already contains predefined values for `VITE_API_URL` (frontend) and `BACKEND_URL` (backend). If the name of your service changes, update them accordingly in your repository or override them from the Render dashboard.
+6. Add the backend and frontend URLs to the authorized origins in your Google Client ID on Cloud Console.
 
-### Deploy successivi
+### Subsequent Deploys
 
-Ogni push su `main` triggera il redeploy automatico di entrambi i servizi.
+Every push to `main` triggers an automatic redeploy of both services.
 
-> **Nota free tier**: il backend va in sleep dopo 15 min di inattività. La prima richiesta dopo il sleep impiega ~30s. Per un'app personale è accettabile.
+> **Free tier note**: the backend goes to sleep after 15 mins of inactivity. The first request after sleeping takes ~30s. For a personal app, this is acceptable.
 
 ## Docker (self-hosted)
 
 ```bash
-make up       # avvia con Docker Compose
-make down     # ferma
-make logs     # segui i log
+make up       # start with Docker Compose
+make down     # stop
+make logs     # follow logs
 ```
 
-Per la produzione su Raspberry Pi:
+For production on Raspberry Pi:
 ```bash
 make pi-up
 ```
 
-## Bot Telegram (opzionale)
+## Telegram Bot (optional)
 
-Il bot usa `X-API-Key` per autenticarsi (non richiede Google OAuth).
+The bot uses `X-API-Key` to authenticate (does not require Google OAuth).
 
-1. Crea un bot con @BotFather → ottieni `TELEGRAM_BOT_TOKEN`
-2. Ottieni il tuo user ID con @userinfobot → `TELEGRAM_ALLOWED_USER_ID`
-3. Configura `BACKEND_URL` con l'URL pubblico del backend (es. `https://ricette-backend-cekk.onrender.com`)
+1. Create a bot with @BotFather → get `TELEGRAM_BOT_TOKEN`
+2. Get your user ID with @userinfobot → `TELEGRAM_ALLOWED_USER_ID`
+3. Configure `BACKEND_URL` with the public backend URL (e.g. `https://ricette-backend-cekk.onrender.com`)
 
-**In produzione (Render)**: il bot si attiva automaticamente con webhook — nessun processo separato. All'avvio del backend, si registra su Telegram e riceve gli update a `POST /telegram/webhook`.
+**In production (Render)**: the bot activates automatically with webhooks — no separate process needed. When the backend starts, it registers with Telegram and receives updates at `POST /telegram/webhook`.
 
-**In locale**: puoi usare `make bot` per testare in modalità polling (non serve `BACKEND_URL`).
+**Locally**: you can use `make bot` to test in polling mode (`BACKEND_URL` is not needed).
 
-4. Manda al bot un URL di una ricetta o del testo libero
+4. Send a recipe URL or free text to the bot.
 
-## Script e Utilità
+## Scripts and Utilities
 
 ```bash
-make help            # elenco completo comandi
-make install         # installa dipendenze
-make dev             # backend + frontend in sviluppo
-make lint            # ruff check sul backend
+make help            # full list of commands
+make install         # install dependencies
+make dev             # backend + frontend in development
+make lint            # ruff check on the backend
 make test            # pytest backend
-make bot             # avvia bot Telegram
+make bot             # start Telegram bot
 ```
 
-## Importazione ricette storiche
+## Testing
 
-Se hai ricette in formato YAML (es. da un vecchio progetto):
+To run backend tests locally:
+
+```bash
+cd backend
+uv run pytest
+```
+
+Tests use `pytest` and mock interactions with GitHub (`github_store.py`) so the real repository is not altered during testing, ensuring that suites are fast and isolated.
+
+## Legacy Recipes Import
+
+If you have recipes in YAML format (e.g. from an old project):
 
 ```bash
 cd backend && uv run python import_legacy.py
 ```
 
-Lo script recupera i file YAML da `recipes-old` su GitHub, li passa a Gemini per la ristrutturazione, e salva tutto nel nuovo formato JSON.
+The script fetches YAML files from `recipes-old` on GitHub, passes them to Gemini for restructuring, and saves everything in the new JSON format.
 
 ## API
 
-Endpoint protetti da autenticazione (Bearer token Google o `X-API-Key`):
+Endpoints protected by authentication (Google Bearer token or `X-API-Key`):
 
 ```bash
-# Estrai e salva da URL
+# Extract and save from URL
 curl -X POST https://ricette-backend.onrender.com/recipes/from-url \
-  -H "X-API-Key: la-tua-chiave" \
+  -H "X-API-Key: your-key-here" \
   -H "Content-Type: application/json" \
   -d '{"url": "https://www.giallozafferano.it/..."}'
 
-# Ricerca (pubblica)
-curl "https://ricette-backend.onrender.com/search?q=pasta+veloce"
+# Search (public)
+curl "https://ricette-backend.onrender.com/search?q=quick+pasta"
 ```
 
-Documentazione interattiva: `https://ricette-backend.onrender.com/docs`
+Interactive documentation: `https://ricette-backend.onrender.com/docs`
 
-## Risoluzione Problemi
+## Troubleshooting
 
-### Login Google non funziona in locale
-Assicurati che `http://localhost:5173` sia nelle **origini JavaScript autorizzate** del tuo Client ID su Google Cloud Console.
+### Google Login does not work locally
+Ensure `http://localhost:5173` is in the **Authorized JavaScript origins** of your Client ID on the Google Cloud Console.
 
-### Errore 401 dopo login
-Il token Google scade dopo ~1 ora. Esci e rifai il login. Il frontend controlla l'expiry automaticamente.
+### 401 Error after login
+The Google token expires after ~1 hour. Log out and log back in. The frontend checks for expiry automatically.
 
-### GitHub token scaduto
-I PAT Classic scadono dopo 30/90 giorni. Rinnovalo su GitHub → Settings → Developer settings.
+### GitHub token expired
+Classic PATs expire after 30/90 days. Renew it on GitHub → Settings → Developer settings.
