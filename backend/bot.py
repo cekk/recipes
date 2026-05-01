@@ -143,7 +143,6 @@ async def shutdown_webhook():
     """Cleanup on FastAPI shutdown."""
     global _application
     if _application:
-        await _application.bot.delete_webhook()
         await _application.stop()
         await _application.shutdown()
         _application = None
