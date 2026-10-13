@@ -24,9 +24,7 @@ async def _chat(prompt: str) -> str:
     response = await client.aio.models.generate_content(
         model=s.gemini_model,
         contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json", temperature=0.1
-        ),
+        config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1),
     )
     return response.text
 

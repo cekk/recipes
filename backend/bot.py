@@ -149,9 +149,7 @@ def _build_application(webhook: bool = False) -> Application:
     application.add_handler(CommandHandler("start", cmd_start))
     application.add_handler(CommandHandler("list", cmd_list))
     application.add_handler(CommandHandler("search", cmd_search))
-    application.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)
-    )
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     return application
 
 

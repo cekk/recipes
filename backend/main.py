@@ -39,9 +39,7 @@ _ALLOWED_ORIGINS = [
 ]
 _settings_origins = get_settings().allowed_origins
 if _settings_origins:
-    _ALLOWED_ORIGINS.extend(
-        o.strip() for o in _settings_origins.split(",") if o.strip()
-    )
+    _ALLOWED_ORIGINS.extend(o.strip() for o in _settings_origins.split(",") if o.strip())
 
 app.add_middleware(
     CORSMiddleware,
@@ -56,9 +54,7 @@ def _validate_url(url: str) -> str:
     """Validate URL to prevent SSRF attacks."""
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
-        raise HTTPException(
-            status_code=422, detail="Solo URL HTTP/HTTPS sono supportati"
-        )
+        raise HTTPException(status_code=422, detail="Solo URL HTTP/HTTPS sono supportati")
     hostname = parsed.hostname
     if not hostname:
         raise HTTPException(status_code=422, detail="URL non valido")
@@ -67,9 +63,7 @@ def _validate_url(url: str) -> str:
         for _, _, _, _, addr in resolved:
             ip = ipaddress.ip_address(addr[0])
             if ip.is_private or ip.is_loopback or ip.is_reserved:
-                raise HTTPException(
-                    status_code=422, detail="URL verso indirizzi privati non consentiti"
-                )
+                raise HTTPException(status_code=422, detail="URL verso indirizzi privati non consentiti")
     except socket.gaierror:
         raise HTTPException(status_code=422, detail="Impossibile risolvere l'hostname")
     return url
@@ -141,9 +135,7 @@ async def auth_me(request: Request):
 # --- Endpoints protetti (richiedono autenticazione) ---
 
 
-@app.post(
-    "/recipes/from-url", response_model=Recipe, dependencies=[Depends(require_auth)]
-)
+@app.post("/recipes/from-url", response_model=Recipe, dependencies=[Depends(require_auth)])
 async def add_recipe_from_url(data: URLInput):
     _validate_url(data.url)
 
@@ -162,9 +154,7 @@ async def add_recipe_from_url(data: URLInput):
     # --- Fallback e Safety Net per blocchi Ricetta Spesso Ignorati ---
     soup = BeautifulSoup(html, "html.parser")
     # WP Recipe Maker, Recipe Cards generiche
-    containers = soup.select(
-        ".wprm-recipe-container, [class*='recipe-container'], [class*='recipe-card']"
-    )
+    containers = soup.select(".wprm-recipe-container, [class*='recipe-container'], [class*='recipe-card']")
 
     extra_text = ""
     for c in containers:
@@ -199,9 +189,7 @@ async def add_recipe_from_url(data: URLInput):
     return recipe
 
 
-@app.post(
-    "/recipes/from-text", response_model=Recipe, dependencies=[Depends(require_auth)]
-)
+@app.post("/recipes/from-text", response_model=Recipe, dependencies=[Depends(require_auth)])
 async def add_recipe_from_text(data: TextInput):
     extracted = await extract_recipe(data.text)
     extracted["source_type"] = "text"

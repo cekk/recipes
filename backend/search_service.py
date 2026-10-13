@@ -1,9 +1,7 @@
 from models import RecipeSummary
 
 
-async def keyword_search(
-    query: str, index: list[RecipeSummary]
-) -> list[tuple[str, float]]:
+async def keyword_search(query: str, index: list[RecipeSummary]) -> list[tuple[str, float]]:
     q = query.lower()
     results = []
     for recipe in index:

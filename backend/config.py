@@ -32,9 +32,7 @@ class Settings(BaseSettings):
             return []
         return [e.strip() for e in self.allowed_emails.split(",") if e.strip()]
 
-    model_config = SettingsConfigDict(
-        env_file=(".env", "../.env"), env_file_encoding="utf-8", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=(".env", "../.env"), env_file_encoding="utf-8", extra="ignore")
 
 
 @lru_cache()

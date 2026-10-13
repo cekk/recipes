@@ -19,9 +19,7 @@ def _verify_google_token(token: str) -> dict:
             detail="Google OAuth non configurato sul server",
         )
     try:
-        idinfo = id_token.verify_oauth2_token(
-            token, google_requests.Request(), settings.google_client_id
-        )
+        idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), settings.google_client_id)
         email = idinfo.get("email", "")
         allowed = settings.allowed_emails_list
         if allowed and email not in allowed:

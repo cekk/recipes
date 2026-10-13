@@ -68,9 +68,7 @@ class Recipe(BaseModel):
     source_type: str = "manual"
     image_urls: list[str] = []
     video_urls: list[str] = []
-    created_at: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str | None = None
 
     def model_post_init(self, __context):

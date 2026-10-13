@@ -34,9 +34,7 @@ class GitHubStore:
         r.raise_for_status()
         return r.json()
 
-    async def _put_file(
-        self, path: str, content: str, message: str, sha: str | None = None
-    ):
+    async def _put_file(self, path: str, content: str, message: str, sha: str | None = None):
         url = f"{GITHUB_API}/repos/{self.repo}/contents/{path}"
         body = {
             "message": message,
@@ -70,9 +68,7 @@ class GitHubStore:
     async def _save_index(self, summaries: list[RecipeSummary]):
         file = await self._get_file("index.json")
         sha = file["sha"] if file else None
-        content = json.dumps(
-            [s.model_dump() for s in summaries], ensure_ascii=False, indent=2
-        )
+        content = json.dumps([s.model_dump() for s in summaries], ensure_ascii=False, indent=2)
         await self._put_file("index.json", content, "Aggiorna indice ricette", sha)
 
     async def rebuild_index(self) -> int:
