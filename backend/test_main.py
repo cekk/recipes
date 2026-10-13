@@ -1,7 +1,10 @@
-from unittest.mock import AsyncMock, patch
+import asyncio
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
 
+import bot
 from main import app
 from models import Recipe, RecipeSummary
 
@@ -179,3 +182,72 @@ def test_get_categories(mock_get_index):
     assert "dolci" in data
     assert "primi" in data
     assert "veloce" in data
+
+
+def test_health_head():
+    response = client.head("/health")
+    assert response.status_code == 200
+
+
+@patch("main.process_update", new_callable=AsyncMock)
+def test_telegram_webhook_missing_secret(mock_process):
+    response = client.post("/telegram/webhook", json={"update_id": 1})
+    assert response.status_code == 403
+    mock_process.assert_not_called()
+
+
+@patch("main.process_update", new_callable=AsyncMock)
+def test_telegram_webhook_wrong_secret(mock_process):
+    response = client.post(
+        "/telegram/webhook",
+        json={"update_id": 1},
+        headers={"X-Telegram-Bot-Api-Secret-Token": "wrong"},
+    )
+    assert response.status_code == 403
+    mock_process.assert_not_called()
+
+
+@patch("main.process_update", new_callable=AsyncMock)
+def test_telegram_webhook_valid_secret(mock_process):
+    response = client.post(
+        "/telegram/webhook",
+        json={"update_id": 1},
+        headers={"X-Telegram-Bot-Api-Secret-Token": bot.webhook_secret()},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    mock_process.assert_called_once()
+
+
+def test_process_update_dedup():
+    mock_app = MagicMock()
+    mock_app.update_queue.put = AsyncMock()
+    old_app = bot._application
+    bot._application = mock_app
+    bot._seen_update_ids.clear()
+    bot._seen_update_ids_set.clear()
+    try:
+        with patch("bot.Update.de_json", return_value=MagicMock()):
+            asyncio.run(bot.process_update({"update_id": 111}))
+            asyncio.run(bot.process_update({"update_id": 111}))
+            assert mock_app.update_queue.put.await_count == 1
+            asyncio.run(bot.process_update({"update_id": 112}))
+            assert mock_app.update_queue.put.await_count == 2
+    finally:
+        bot._application = old_app
+        bot._seen_update_ids.clear()
+        bot._seen_update_ids_set.clear()
+
+
+def _update_for_user(user_id):
+    update = MagicMock()
+    update.effective_user.id = user_id
+    return update
+
+
+def test_is_allowed():
+    with patch("bot.get_settings", return_value=SimpleNamespace(telegram_allowed_user_id=0)):
+        assert bot._is_allowed(_update_for_user(42)) is False
+    with patch("bot.get_settings", return_value=SimpleNamespace(telegram_allowed_user_id=42)):
+        assert bot._is_allowed(_update_for_user(42)) is True
+        assert bot._is_allowed(_update_for_user(7)) is False

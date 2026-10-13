@@ -64,7 +64,7 @@ cp env.example .env
 3. **Create credentials → OAuth client ID → Web application**
 4. Authorized JavaScript origins:
    - `http://localhost:5173` (local development)
-   - `https://ricette-frontend.onrender.com` (production — add after deploy)
+   - `https://ricette-cekk.onrender.com` (production — add after deploy)
 5. Copy the **Client ID** (format: `xxxxxxxxxx.apps.googleusercontent.com`)
 
 ### 3. Environment Variables
@@ -81,7 +81,7 @@ Configure the following variables in your `.env` file:
 | `ALLOWED_EMAILS` | Emails authorized to write, separated by commas | Yes (e.g. `you@gmail.com`) |
 | `ALLOWED_ORIGINS` | Additional CORS origins, separated by commas | No |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token (from @BotFather) | No |
-| `TELEGRAM_ALLOWED_USER_ID` | Your Telegram User ID (from @userinfobot) | No |
+| `TELEGRAM_ALLOWED_USER_ID` | Your Telegram User ID (from @userinfobot) | Yes, if using the bot (0 or empty = the bot rejects everyone) |
 | `BACKEND_URL` | Public backend URL (for Telegram webhooks) | No (yes if using the bot) |
 
 For the **frontend** (in `.env` in the root or Render variables):
@@ -89,7 +89,7 @@ For the **frontend** (in `.env` in the root or Render variables):
 | Variable | Description |
 |-----------|-------------|
 | `VITE_GOOGLE_CLIENT_ID` | Same OAuth Client ID (read by Vite during build) |
-| `VITE_API_URL` | Backend URL (only in production, e.g. `https://ricette-backend.onrender.com`) |
+| `VITE_API_URL` | Backend URL (only in production, e.g. `https://ricette-backend-cekk.onrender.com`) |
 
 ### 4. Install dependencies and run locally
 
@@ -125,7 +125,11 @@ The `render.yaml` file configures everything automatically.
 
 Every push to `main` triggers an automatic redeploy of both services.
 
-> **Free tier note**: the backend goes to sleep after 15 mins of inactivity. The first request after sleeping takes ~30s. For a personal app, this is acceptable.
+#### Keep-alive
+
+On the Render free tier the backend sleeps after 15 minutes of inactivity, and the first request after sleeping takes ~30s (which can also make Telegram retry updates). To keep it awake, create an UptimeRobot (or similar) monitor that hits `https://ricette-backend-cekk.onrender.com/health` every 5 minutes; a Keyword monitor looking for `ok` is better than a plain HTTP one.
+
+Do **not** point the monitor at the frontend URL: the SPA rewrite rule in `render.yaml` returns 200 with `index.html` for any path, so the monitor would always be green without ever touching the backend.
 
 ## Docker (self-hosted)
 
@@ -145,10 +149,10 @@ make pi-up
 The bot uses `X-API-Key` to authenticate (does not require Google OAuth).
 
 1. Create a bot with @BotFather → get `TELEGRAM_BOT_TOKEN`
-2. Get your user ID with @userinfobot → `TELEGRAM_ALLOWED_USER_ID`
+2. Get your user ID with @userinfobot → `TELEGRAM_ALLOWED_USER_ID` (**required**: if it is `0` or empty, the bot rejects every user, including for `/list` and `/search`)
 3. Configure `BACKEND_URL` with the public backend URL (e.g. `https://ricette-backend-cekk.onrender.com`)
 
-**In production (Render)**: the bot activates automatically with webhooks — no separate process needed. When the backend starts, it registers with Telegram and receives updates at `POST /telegram/webhook`.
+**In production (Render)**: the bot activates automatically with webhooks — no separate process needed. When the backend starts, it registers with Telegram and receives updates at `POST /telegram/webhook`. The webhook is protected by a `secret_token` derived from `API_KEY` (if `API_KEY` changes, the webhook is re-registered on the next restart). It replies immediately and processes updates in the background, and repeated updates (same `update_id`) are processed only once.
 
 **Locally**: you can use `make bot` to test in polling mode (`BACKEND_URL` is not needed).
 
@@ -192,16 +196,16 @@ Endpoints protected by authentication (Google Bearer token or `X-API-Key`):
 
 ```bash
 # Extract and save from URL
-curl -X POST https://ricette-backend.onrender.com/recipes/from-url \
+curl -X POST https://ricette-backend-cekk.onrender.com/recipes/from-url \
   -H "X-API-Key: your-key-here" \
   -H "Content-Type: application/json" \
   -d '{"url": "https://www.giallozafferano.it/..."}'
 
 # Search (public)
-curl "https://ricette-backend.onrender.com/search?q=quick+pasta"
+curl "https://ricette-backend-cekk.onrender.com/search?q=quick+pasta"
 ```
 
-Interactive documentation: `https://ricette-backend.onrender.com/docs`
+Interactive documentation: `https://ricette-backend-cekk.onrender.com/docs`
 
 ## Troubleshooting
 

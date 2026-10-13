@@ -1,4 +1,6 @@
+import asyncio
 import ipaddress
+import secrets
 import socket
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -11,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from ai_service import extract_recipe
 from auth import _verify_google_token, require_auth
-from bot import process_update, setup_webhook, shutdown_webhook
+from bot import process_update, setup_webhook, shutdown_webhook, webhook_secret
 from config import get_settings
 from github_store import store
 from models import Recipe, RecipeSummary, SearchResult, TextInput, URLInput
@@ -76,7 +78,7 @@ def _validate_url(url: str) -> str:
 # --- Endpoints pubblici ---
 
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 async def health():
     return {"status": "ok"}
 
@@ -151,7 +153,7 @@ async def add_recipe_from_url(data: URLInput):
         if summary.source_url and summary.source_url.strip("/") == data.url.strip("/"):
             raise HTTPException(status_code=409, detail="Ricetta già presente (URL duplicato)")
 
-    html = trafilatura.fetch_url(data.url)
+    html = await asyncio.to_thread(trafilatura.fetch_url, data.url)
     if not html:
         raise HTTPException(status_code=422, detail="Impossibile scaricare la pagina")
 
@@ -255,6 +257,9 @@ async def rebuild_index():
 
 @app.post("/telegram/webhook")
 async def telegram_webhook(request: Request):
+    token = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+    if not secrets.compare_digest(token.encode(), webhook_secret().encode()):
+        raise HTTPException(status_code=403, detail="Forbidden")
     payload = await request.json()
     await process_update(payload)
     return {"ok": True}
