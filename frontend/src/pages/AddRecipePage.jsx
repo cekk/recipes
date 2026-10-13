@@ -1,35 +1,26 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { api, isAuthorized } from "../api";
+import { EMPTY_FORM, formToPayload } from "../recipeForm";
+import RecipeFields, { Field, FormMessage } from "../components/RecipeFields";
+import { Message } from "../components/PageState";
+import { LinkIcon, TextIcon, PencilIcon, CloseIcon } from "../components/Icons";
 
-const TABS = ["URL", "Testo", "Manuale"];
-
-const EMPTY_MANUAL = {
-  title: "",
-  description: "",
-  ingredients: "",
-  steps: "",
-  prep_time: "",
-  cook_time: "",
-  servings: "",
-  difficulty: "",
-  categories: "",
-  image_urls: "",
-  video_urls: "",
-  notes: "",
-};
+const MODES = [
+  { title: "Da un link", sub: "Un sito di ricette, un blog", Icon: LinkIcon, color: "bg-lemon" },
+  { title: "Da un testo", sub: "Un messaggio, una nota", Icon: TextIcon, color: "bg-sky" },
+  { title: "A mano", sub: "La ricetta di casa tua", Icon: PencilIcon, color: "bg-mint" },
+];
 
 export default function AddRecipePage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState(0);
   const [url, setUrl] = useState("");
   const [text, setText] = useState("");
-  const [manual, setManual] = useState(EMPTY_MANUAL);
+  const [manual, setManual] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-
-
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -44,39 +35,9 @@ export default function AddRecipePage() {
       } else if (tab === 1) {
         recipe = await api.addFromText(text.trim());
       } else {
-        const payload = {
-          title: manual.title,
-          description: manual.description || null,
-          ingredients: manual.ingredients
-            .split("\n")
-            .map((s) => s.trim())
-            .filter(Boolean),
-          steps: manual.steps
-            .split("\n")
-            .map((s) => s.trim())
-            .filter(Boolean),
-          prep_time: manual.prep_time ? parseInt(manual.prep_time) : null,
-          cook_time: manual.cook_time ? parseInt(manual.cook_time) : null,
-          servings: manual.servings ? parseInt(manual.servings) : null,
-          difficulty: manual.difficulty || null,
-          categories: manual.categories
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean),
-          image_urls: manual.image_urls
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean),
-          video_urls: manual.video_urls
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean),
-          notes: manual.notes || null,
-          source_type: "manual",
-        };
-        recipe = await api.addManual(payload);
+        recipe = await api.addManual({ ...formToPayload(manual), source_type: "manual" });
       }
-      setSuccess(`✅ "${recipe.title}" salvata!`);
+      setSuccess(`«${recipe.title}» salvata. Ti porto alla ricetta…`);
       setTimeout(() => navigate(`/recipe/${recipe.id}`), 1200);
     } catch (e) {
       setError(e.message);
@@ -87,234 +48,111 @@ export default function AddRecipePage() {
 
   if (!isAuthorized()) {
     return (
-      <div className="max-w-md mx-auto mt-12">
-        <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 text-center">
-          <h2 className="text-xl font-bold mb-1">Accesso richiesto</h2>
-          <p className="text-stone-500 text-sm">
-            Effettua il login con Google dal menu in alto per aggiungere ricette.
-          </p>
-        </div>
-      </div>
+      <Message title="Accesso richiesto">
+        Accedi con Google dal menu in alto per aggiungere ricette.
+      </Message>
     );
   }
 
-  return (
-    <div className="max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-5">Aggiungi una ricetta</h1>
+  const submitLabel = loading
+    ? tab === 2 ? "Salvataggio…" : "Sto leggendo la ricetta…"
+    : tab === 2 ? "Salva ricetta" : "Estrai e salva";
 
-      {/* Tabs */}
-      <div className="flex border-b border-stone-200 mb-6">
-        {TABS.map((label, i) => (
-          <button
-            key={label}
-            onClick={() => setTab(i)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab === i
-                ? "border-amber-500 text-amber-600"
-                : "border-transparent text-stone-500 hover:text-stone-700"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+  return (
+    <div className="max-w-3xl flex flex-col gap-5 md:gap-7">
+      <div className="flex items-center gap-3">
+        <Link to="/" aria-label="Chiudi" className="md:hidden w-11 h-11 shrink-0 rounded-full border-2 border-ink flex items-center justify-center">
+          <CloseIcon size={18} strokeWidth={2.6} />
+        </Link>
+        <h1 className="font-display text-[26px] md:text-[clamp(36px,5vw,52px)] leading-none tracking-[-0.02em]">
+          Nuova ricetta
+        </h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* URL */}
+      <fieldset className="flex flex-col gap-2.5">
+        <legend className="text-[13px] font-extrabold uppercase tracking-wide text-muted mb-2.5">Da dove arriva?</legend>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 md:gap-3">
+          {MODES.map(({ title, sub, Icon, color }, i) => {
+            const active = tab === i;
+            return (
+              <button
+                key={title}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setTab(i)}
+                className={`flex items-center gap-3 px-3.5 py-3 min-h-[68px] rounded-[18px] border-2 text-left transition-[background-color,border-color,box-shadow] ${
+                  active ? "bg-white border-ink shadow-hard" : "bg-cream border-cream hover:border-line"
+                }`}
+              >
+                <span className={`shrink-0 w-10 h-10 rounded-xl border-2 border-ink inline-flex items-center justify-center ${color}`}>
+                  <Icon size={20} strokeWidth={2.2} />
+                </span>
+                <span className="flex-1 flex flex-col">
+                  <span className="text-base font-extrabold">{title}</span>
+                  <span className="text-[13px] font-medium text-muted">{sub}</span>
+                </span>
+                <span aria-hidden="true" className="md:hidden shrink-0 w-[22px] h-[22px] rounded-full border-2 border-ink inline-flex items-center justify-center">
+                  {active && <span className="w-2.5 h-2.5 rounded-full bg-ink" />}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         {tab === 0 && (
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              URL della ricetta
-            </label>
-            <input
+          <div className="flex flex-col gap-2">
+            <Field
+              label="Link della ricetta"
               type="url"
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={setUrl}
               required
-              placeholder="https://www.giallozafferano.it/…"
-              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              placeholder="https://…"
             />
-            <p className="text-xs text-stone-400 mt-1">
-              Incolla l'URL della ricetta: l'AI estrarrà automaticamente tutti i
-              dati.
+            <p className="text-[13px] md:text-sm font-medium text-muted">
+              Estraiamo titolo, ingredienti, passaggi, tempi e foto. Se la ricetta c'è già, te lo diciamo.
             </p>
           </div>
         )}
 
-        {/* Testo */}
         {tab === 1 && (
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Testo della ricetta
-            </label>
-            <textarea
+          <div className="flex flex-col gap-2">
+            <Field
+              label="Testo della ricetta"
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={setText}
               required
-              rows={10}
-              placeholder="Incolla il testo della ricetta oppure scrivila tu…"
-              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-y"
+              multiline
+              rows={8}
+              placeholder="Incolla qui la ricetta, anche disordinata…"
             />
-            <p className="text-xs text-stone-400 mt-1">
-              L'AI strutturerà automaticamente ingredienti, dosi e passaggi.
+            <p className="text-[13px] md:text-sm font-medium text-muted">
+              Separiamo noi ingredienti, dosi e passaggi.
             </p>
           </div>
         )}
 
-        {/* Manuale */}
-        {tab === 2 && (
-          <div className="space-y-3">
-            <Field
-              label="Titolo *"
-              value={manual.title}
-              onChange={(v) => setManual((p) => ({ ...p, title: v }))}
-              required
-            />
-            <Field
-              label="Descrizione"
-              value={manual.description}
-              onChange={(v) => setManual((p) => ({ ...p, description: v }))}
-              multiline
-              rows={2}
-            />
-            <Field
-              label="Ingredienti (uno per riga)"
-              value={manual.ingredients}
-              onChange={(v) => setManual((p) => ({ ...p, ingredients: v }))}
-              multiline
-              rows={5}
-              placeholder="200g di pasta&#10;2 uova&#10;50g di guanciale"
-            />
-            <Field
-              label="Passaggi (uno per riga)"
-              value={manual.steps}
-              onChange={(v) => setManual((p) => ({ ...p, steps: v }))}
-              multiline
-              rows={5}
-              placeholder="Fare bollire l'acqua…&#10;Nel frattempo…"
-            />
-            <div className="grid grid-cols-3 gap-3">
-              <Field
-                label="Prep (min)"
-                value={manual.prep_time}
-                onChange={(v) => setManual((p) => ({ ...p, prep_time: v }))}
-                type="number"
-              />
-              <Field
-                label="Cottura (min)"
-                value={manual.cook_time}
-                onChange={(v) => setManual((p) => ({ ...p, cook_time: v }))}
-                type="number"
-              />
-              <Field
-                label="Porzioni"
-                value={manual.servings}
-                onChange={(v) => setManual((p) => ({ ...p, servings: v }))}
-                type="number"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Difficoltà
-              </label>
-              <select
-                value={manual.difficulty}
-                onChange={(e) =>
-                  setManual((p) => ({ ...p, difficulty: e.target.value }))
-                }
-                className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-              >
-                <option value="">— Seleziona —</option>
-                <option value="facile">Facile</option>
-                <option value="medio">Medio</option>
-                <option value="difficile">Difficile</option>
-              </select>
-            </div>
-            <Field
-              label="Categorie (separate da virgola)"
-              value={manual.categories}
-              onChange={(v) => setManual((p) => ({ ...p, categories: v }))}
-              placeholder="primi, vegetariano, veloce"
-            />
-            <Field
-              label="Immagini URL (separate da virgola)"
-              value={manual.image_urls}
-              onChange={(v) => setManual((p) => ({ ...p, image_urls: v }))}
-              placeholder="https://...jpg, https://...png"
-            />
-            <Field
-              label="Video URL (separate da virgola)"
-              value={manual.video_urls}
-              onChange={(v) => setManual((p) => ({ ...p, video_urls: v }))}
-              placeholder="https://youtube.com/..."
-            />
-            <Field
-              label="Note"
-              value={manual.notes}
-              onChange={(v) => setManual((p) => ({ ...p, notes: v }))}
-              multiline
-              rows={2}
-            />
-          </div>
-        )}
+        {tab === 2 && <RecipeFields form={manual} setForm={setManual} />}
 
-        {error && (
-          <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            {error}
-          </p>
-        )}
-        {success && (
-          <p className="text-green-700 text-sm bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-            {success}
-          </p>
-        )}
+        {error && <FormMessage>{error}</FormMessage>}
+        {success && <FormMessage tone="success">{success}</FormMessage>}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl transition-colors"
-        >
-          {loading ? "Elaborazione in corso…" : "Salva ricetta"}
-        </button>
+        <div className="sticky bottom-0 -mx-4 sm:-mx-6 md:mx-0 px-4 sm:px-6 md:px-0 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] bg-white/95 backdrop-blur flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full md:w-auto inline-flex items-center justify-center gap-2.5 min-h-14 px-7 rounded-2xl bg-tomato border-2 border-ink shadow-hard font-display text-[17px] disabled:opacity-60 active:translate-x-px active:translate-y-px active:shadow-none transition"
+          >
+            {loading && <span className="w-4 h-4 border-2 border-ink/30 border-t-ink rounded-full animate-spin" />}
+            {submitLabel}
+          </button>
+          <Link to="/" className="hidden md:inline-flex items-center min-h-11 font-bold text-muted hover:text-ink">
+            Annulla
+          </Link>
+        </div>
       </form>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  multiline,
-  rows = 3,
-  type = "text",
-  required,
-  placeholder,
-}) {
-  const cls =
-    "w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400";
-  return (
-    <div>
-      <label className="block text-sm font-medium mb-1">{label}</label>
-      {multiline ? (
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          rows={rows}
-          required={required}
-          placeholder={placeholder}
-          className={`${cls} resize-y`}
-        />
-      ) : (
-        <input
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          required={required}
-          placeholder={placeholder}
-          className={cls}
-        />
-      )}
     </div>
   );
 }

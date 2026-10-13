@@ -1,17 +1,34 @@
 import { useRef, useEffect } from "react";
-import { Link, useLocation } from "react-router";
+import { Link, NavLink, useLocation } from "react-router";
 import { isLoggedIn, getUser, logout, renderGoogleButton, initGoogleAuth } from "../auth";
+import { PlusIcon } from "./Icons";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
-export default function Header() {
-  const location = useLocation();
+export function useAuthState() {
   const user = getUser();
   const loggedIn = isLoggedIn();
   const authorized = loggedIn && user && (() => {
     const allowed = (import.meta.env.VITE_ALLOWED_EMAILS || "").split(",").map(e => e.trim()).filter(Boolean);
     return allowed.length === 0 || allowed.includes(user.email);
   })();
+  return { user, loggedIn, authorized };
+}
+
+export function Logo({ className = "" }) {
+  return (
+    <Link
+      to="/"
+      className={`inline-flex bg-lemon border-2 border-ink rounded-xl px-3 py-1 -rotate-2 font-display text-lg md:text-xl text-ink ${className}`}
+    >
+      RICETTE!
+    </Link>
+  );
+}
+
+export default function Header() {
+  const location = useLocation();
+  const { user, loggedIn, authorized } = useAuthState();
   const googleBtnRef = useRef(null);
 
   useEffect(() => {
@@ -27,55 +44,47 @@ export default function Header() {
   }, [loggedIn, location.pathname]);
 
   return (
-    <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <Link
-          to="/"
-          className="text-2xl font-bold tracking-tighter text-slate-900 flex items-center gap-2 hover:opacity-90 transition-opacity"
-        >
-          <span className="text-indigo-600 bg-indigo-50 p-1.5 rounded-lg shadow-sm">🍽️</span> 
-          <span>Le mie ricette</span>
-        </Link>
-        <nav className="flex items-center gap-6">
-          <Link
+    <header className="bg-white md:border-b-[1.5px] md:border-line md:sticky md:top-0 z-40">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 min-h-16 md:min-h-[76px] py-2 flex items-center justify-between gap-4">
+        <Logo />
+        <nav className="flex items-center gap-2.5">
+          <NavLink
             to="/"
-            className={`text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors ${
-              location.pathname === "/" ? "text-indigo-600 font-semibold" : ""
-            }`}
+            end
+            className={({ isActive }) =>
+              `hidden md:inline-flex items-center min-h-11 px-3.5 rounded-full text-[15px] font-extrabold ${
+                isActive ? "bg-cream" : "hover:bg-cream"
+              }`
+            }
           >
-            Tutte le ricette
-          </Link>
+            Ricette
+          </NavLink>
           {loggedIn && (
             <>
               {authorized && (
                 <Link
                   to="/add"
-                  className="bg-slate-900 text-white text-sm font-semibold px-4 py-2 rounded-full hover:bg-slate-800 transition-colors shadow-sm"
+                  className="hidden md:inline-flex items-center gap-2 min-h-11 px-4.5 rounded-full bg-tomato border-2 border-ink shadow-hard text-[15px] font-extrabold hover:-translate-x-px hover:-translate-y-px hover:shadow-hard-lg transition-[translate,box-shadow]"
                 >
-                  + Aggiungi
+                  <PlusIcon strokeWidth={2.6} />
+                  Aggiungi
                 </Link>
               )}
-              <div className="flex items-center gap-3 border-l border-slate-200 pl-6 ml-2">
-                {user?.picture && (
-                  <img
-                    src={user.picture}
-                    alt={user.name}
-                    className="w-8 h-8 rounded-full shadow-sm"
-                    referrerPolicy="no-referrer"
-                  />
+              <div className="hidden md:flex items-center gap-2 ml-1.5">
+                {user?.picture ? (
+                  <img src={user.picture} alt="" className="w-11 h-11 rounded-full border-2 border-ink" referrerPolicy="no-referrer" />
+                ) : (
+                  <span className="w-11 h-11 rounded-full border-2 border-ink bg-sky inline-flex items-center justify-center font-extrabold">
+                    {user?.name?.[0] || "?"}
+                  </span>
                 )}
-                <button
-                  onClick={logout}
-                  className="text-sm font-medium text-slate-500 hover:text-red-500 transition-colors"
-                >
+                <button onClick={logout} className="min-h-11 px-2 text-[15px] font-bold text-muted hover:text-danger">
                   Esci
                 </button>
               </div>
             </>
           )}
-          {!loggedIn && (
-            <div ref={googleBtnRef} className="min-w-[120px] ml-2" />
-          )}
+          {!loggedIn && <div ref={googleBtnRef} className="min-w-[120px]" />}
         </nav>
       </div>
     </header>

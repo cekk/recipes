@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SearchIcon, CloseIcon } from "./Icons";
 
 export default function SearchBar({ onSearch, loading }) {
   const [query, setQuery] = useState("");
@@ -16,36 +17,40 @@ export default function SearchBar({ onSearch, loading }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col sm:flex-row gap-3 items-center w-full max-w-3xl mx-auto"
+      role="search"
+      className="flex items-center gap-2.5 w-full h-[52px] md:h-14 bg-white border-2 border-ink rounded-2xl md:rounded-[18px] pl-4 pr-1.5 focus-within:shadow-hard transition-shadow"
     >
-      <div className="relative flex-1 w-full">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <span className="text-slate-400">🔍</span>
-        </div>
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Cerca una ricetta… es. 'pasta veloce' o 'zucchine'"
-          className="w-full border-0 rounded-2xl pl-11 pr-12 py-4 text-base sm:text-lg text-slate-900 shadow-xl shadow-slate-200/50 ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow bg-white"
-        />
-        {query && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 bg-slate-100 p-1 rounded-full"
-          >
-            ✕
-          </button>
-        )}
-      </div>
-
+      <SearchIcon size={20} strokeWidth={2.2} className="shrink-0" />
+      <label htmlFor="recipe-search" className="sr-only">
+        Cerca una ricetta
+      </label>
+      <input
+        id="recipe-search"
+        type="search"
+        enterKeyHint="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="zucchine, polpette, tiramisù…"
+        className="flex-1 min-w-0 bg-transparent border-0 outline-none focus-visible:outline-none text-base font-medium placeholder:text-faint [&::-webkit-search-cancel-button]:hidden"
+      />
+      {query && (
+        <button
+          type="button"
+          onClick={handleClear}
+          aria-label="Cancella ricerca"
+          className="shrink-0 w-10 h-10 inline-flex items-center justify-center rounded-full text-muted hover:text-ink hover:bg-cream"
+        >
+          <CloseIcon size={18} strokeWidth={2.4} />
+        </button>
+      )}
       <button
         type="submit"
         disabled={loading}
-        className="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-8 py-4 rounded-2xl text-base font-semibold shadow-xl shadow-indigo-200 transition-all hover:shadow-indigo-300 hover:-translate-y-0.5"
+        className={`shrink-0 h-[42px] px-4.5 rounded-xl bg-ink text-white font-extrabold disabled:opacity-60 ${
+          loading ? "inline-flex items-center" : "hidden sm:inline-flex items-center"
+        }`}
       >
-        {loading ? "Cerco..." : "Cerca"}
+        {loading ? "Cerco…" : "Cerca"}
       </button>
     </form>
   );

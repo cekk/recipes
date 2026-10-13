@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { api } from "../api";
 import RecipeCard from "../components/RecipeCard";
 import SearchBar from "../components/SearchBar";
+import { Loading, Message } from "../components/PageState";
+import { categoryTone, capitalize } from "../format";
 
 export default function RecipesPage() {
   const [allRecipes, setAllRecipes] = useState([]);
@@ -22,12 +24,20 @@ export default function RecipesPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const displayed = useMemo(() => {
-    const base = searchResults ?? allRecipes;
-    return selectedCat
-      ? base.filter((r) => r.categories.includes(selectedCat))
-      : base;
-  }, [allRecipes, searchResults, selectedCat]);
+  const base = searchResults ?? allRecipes;
+
+  const displayed = useMemo(
+    () => (selectedCat ? base.filter((r) => r.categories.includes(selectedCat)) : base),
+    [base, selectedCat],
+  );
+
+  const chips = useMemo(
+    () =>
+      categories
+        .map((cat) => ({ cat, count: base.filter((r) => r.categories.includes(cat)).length }))
+        .filter((c) => c.count > 0 || c.cat === selectedCat),
+    [categories, base, selectedCat],
+  );
 
   async function handleSearch(query) {
     if (!query) {
@@ -49,123 +59,93 @@ export default function RecipesPage() {
     setSelectedCat((prev) => (prev === cat ? "" : cat));
   }
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-32 text-slate-400">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="font-medium">Caricamento ricette…</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <Loading label="Caricamento ricette…" />;
 
   if (error) {
     return (
-      <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-red-100 max-w-2xl mx-auto mt-10">
-        <p className="text-red-500 text-5xl mb-4">⚠️</p>
-        <p className="text-slate-900 text-xl font-bold mb-2">
-          Errore di caricamento
-        </p>
-        <p className="text-red-600 font-medium mb-1">{error}</p>
-        <p className="text-slate-500 text-sm">
-          Controlla che il backend sia raggiungibile.
-        </p>
-      </div>
+      <Message title="Errore di caricamento" tone="error">
+        <p className="text-danger font-semibold">{error}</p>
+        <p className="text-sm mt-1">Controlla che il backend sia raggiungibile.</p>
+      </Message>
     );
   }
 
   return (
-    <div className="flex flex-col gap-12">
-      {/* Hero Section */}
-      <section className="text-center mt-8 mb-4 max-w-4xl mx-auto w-full px-4">
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight mb-6">
-          Cosa ti va di{" "}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600">
-            cucinare
-          </span>{" "}
-          oggi?
-        </h1>
-        <p className="text-lg sm:text-xl text-slate-600 mb-10 max-w-2xl mx-auto">
-          Cerca tra le tue ricette preferite per ingrediente, nome o categoria.
-        </p>
-
-        <div className="relative">
-          <div className="absolute inset-x-0 -top-10 -bottom-10 bg-indigo-50 blur-3xl -z-10 rounded-full opacity-50"></div>
+    <div className="flex flex-col gap-5 md:gap-7">
+      <section className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 md:gap-6">
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[13px] md:text-sm font-semibold text-muted">
+            {allRecipes.length} {allRecipes.length === 1 ? "ricetta" : "ricette"} nel ricettario
+          </p>
+          <h1 className="font-display text-[34px] md:text-[clamp(36px,5vw,60px)] leading-none tracking-[-0.025em]">
+            Cosa cuciniamo oggi?
+          </h1>
+        </div>
+        <div className="md:flex-[0_1_460px]">
           <SearchBar onSearch={handleSearch} loading={searching} />
         </div>
       </section>
 
-      {/* Main Content Area */}
-      <div className="w-full">
-        {/* Categories */}
-        {categories.length > 0 && !searchResults && (
-          <div className="flex flex-wrap justify-center gap-2.5 mb-10 max-w-5xl mx-auto">
-            <button
-              onClick={() => setSelectedCat("")}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all shadow-sm ${
-                !selectedCat
-                  ? "bg-slate-900 text-white ring-2 ring-slate-900 ring-offset-2"
-                  : "bg-white text-slate-600 hover:bg-slate-50 ring-1 ring-slate-200"
-              }`}
-            >
-              Tutte
-            </button>
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => toggleCategory(cat)}
-                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all shadow-sm ${
-                  selectedCat === cat
-                    ? "bg-indigo-600 text-white ring-2 ring-indigo-600 ring-offset-2"
-                    : "bg-white text-slate-600 hover:bg-slate-50 ring-1 ring-slate-200"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        )}
+      {chips.length > 0 && (
+        <section
+          aria-label="Categorie"
+          className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6 md:mx-0 md:px-0 md:flex-wrap md:overflow-visible"
+        >
+          <CategoryChip label="Tutte" count={base.length} active={!selectedCat} onClick={() => setSelectedCat("")} />
+          {chips.map(({ cat, count }) => (
+            <CategoryChip
+              key={cat}
+              label={capitalize(cat)}
+              count={count}
+              color={categoryTone(cat).solid}
+              active={selectedCat === cat}
+              onClick={() => toggleCategory(cat)}
+            />
+          ))}
+        </section>
+      )}
 
-        {/* Results Metadata */}
-        {searchResults !== null && (
-          <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
-            <h2 className="text-2xl font-bold text-slate-900">
-              Risultati di ricerca
-            </h2>
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-                {displayed.length} element{displayed.length === 1 ? "o" : "i"}
-              </span>
-              <button
-                onClick={() => setSearchResults(null)}
-                className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
-              >
-                Torna a tutte
-              </button>
-            </div>
-          </div>
-        )}
+      {searchResults !== null && (
+        <div className="flex items-center justify-between gap-4 bg-cream rounded-2xl px-4 py-2">
+          <p className="font-extrabold">
+            {displayed.length} {displayed.length === 1 ? "risultato" : "risultati"}
+          </p>
+          <button
+            onClick={() => setSearchResults(null)}
+            className="min-h-11 font-extrabold text-cobalt hover:text-cobalt-dark"
+          >
+            Mostra tutte
+          </button>
+        </div>
+      )}
 
-        {/* Recipe Grid */}
-        {displayed.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-slate-100 mt-8">
-            <p className="text-5xl mb-4 opacity-50">🍽️</p>
-            <p className="text-xl font-bold text-slate-900 mb-2">
-              Nessuna ricetta trovata
-            </p>
-            <p className="text-slate-500">
-              Prova a cambiare i termini di ricerca o la categoria.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
-            {displayed.map((recipe) => (
-              <RecipeCard key={recipe.id} recipe={recipe} />
-            ))}
-          </div>
-        )}
-      </div>
+      {displayed.length === 0 ? (
+        <Message title="Nessuna ricetta trovata">
+          Prova a cambiare i termini di ricerca o la categoria.
+        </Message>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-x-3 gap-y-5 md:gap-x-5 md:gap-y-8 md:mt-2">
+          {displayed.map((recipe) => (
+            <RecipeCard key={recipe.id} recipe={recipe} />
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+function CategoryChip({ label, count, color = "bg-white", active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`shrink-0 inline-flex items-center gap-1.5 min-h-10 md:min-h-11 px-3.5 md:px-4 rounded-full border-2 border-ink text-sm md:text-[15px] font-extrabold transition-colors ${
+        active ? "bg-ink text-white" : `${color} text-ink`
+      }`}
+    >
+      {label}
+      <span className="font-semibold opacity-70">{count}</span>
+    </button>
   );
 }
