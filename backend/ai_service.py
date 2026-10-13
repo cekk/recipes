@@ -17,13 +17,13 @@ def _get_client() -> genai.Client:
     return _client
 
 
-async def _chat(prompt: str) -> str:
+async def _chat(contents: str | list) -> str:
     s = get_settings()
     client = _get_client()
 
     response = await client.aio.models.generate_content(
         model=s.gemini_model,
-        contents=prompt,
+        contents=contents,
         config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1),
     )
     return response.text
@@ -34,8 +34,8 @@ def _parse_json(text: str) -> dict:
     return json.loads(text)
 
 
-async def extract_recipe(content: str) -> dict:
-    prompt = f"""Sei un assistente che estrae dati strutturati da ricette di cucina.
+def _build_prompt(content: str) -> str:
+    return f"""Sei un assistente che estrae dati strutturati da ricette di cucina.
 Analizza il seguente testo e restituisci SOLO un JSON valido (senza markdown) con questa struttura:
 {{
   "title": "nome della ricetta in italiano",
@@ -58,5 +58,19 @@ primi, secondi, contorni, dolci, antipasti, zuppe, insalate, pizza, pane, colazi
 Testo:
 {content}"""
 
-    raw = await _chat(prompt)
+
+async def extract_recipe(content: str) -> dict:
+    raw = await _chat(_build_prompt(content))
+    return _parse_json(raw)
+
+
+async def extract_recipe_from_images(images: list[tuple[bytes, str]], text: str | None = None) -> dict:
+    content = "La ricetta è nelle immagini allegate (screenshot); trascrivi fedelmente ingredienti e passaggi."
+    if text:
+        content += f"\n\nTesto aggiuntivo dell'utente:\n{text}"
+    contents = [
+        _build_prompt(content),
+        *[types.Part.from_bytes(data=data, mime_type=mime_type) for data, mime_type in images],
+    ]
+    raw = await _chat(contents)
     return _parse_json(raw)

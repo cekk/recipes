@@ -34,11 +34,12 @@ class GitHubStore:
         r.raise_for_status()
         return r.json()
 
-    async def _put_file(self, path: str, content: str, message: str, sha: str | None = None):
+    async def _put_file(self, path: str, content: str | bytes, message: str, sha: str | None = None):
         url = f"{GITHUB_API}/repos/{self.repo}/contents/{path}"
+        raw = content if isinstance(content, bytes) else content.encode()
         body = {
             "message": message,
-            "content": base64.b64encode(content.encode()).decode(),
+            "content": base64.b64encode(raw).decode(),
             "branch": self.branch,
         }
         if sha:
@@ -124,7 +125,28 @@ class GitHubStore:
         index = await self.get_index()
         index = [s for s in index if s.id != recipe_id]
         await self._save_index(index)
+        await self._delete_images(recipe_id)
         return True
+
+    # --- Images ---
+
+    async def save_image(self, recipe_id: str, data: bytes, ext: str) -> str:
+        path = f"images/{recipe_id}.{ext}"
+        existing = await self._get_file(path)
+        sha = existing["sha"] if existing else None
+        await self._put_file(path, data, f"Aggiunge immagine ricetta {recipe_id}", sha)
+        return f"https://raw.githubusercontent.com/{self.repo}/{self.branch}/{path}"
+
+    async def _delete_images(self, recipe_id: str):
+        """Best-effort removal of images/{recipe_id}.*; never fails the recipe deletion."""
+        for ext in ("jpg", "png", "webp"):
+            try:
+                path = f"images/{recipe_id}.{ext}"
+                file = await self._get_file(path)
+                if file:
+                    await self._delete_file(path, f"Elimina immagine ricetta {recipe_id}", file["sha"])
+            except Exception as exc:
+                print(f"Impossibile eliminare l'immagine {recipe_id}.{ext}: {exc}")
 
 
 store = GitHubStore()

@@ -11,6 +11,8 @@ Personal web app to collect, organize, and search for recipes.
 - **Category filter** — labels automatically assigned by the AI.
 - **Images and Videos** — images extracted from the original page, displayed in a gallery on the detail page.
 - **Telegram Bot** — share a URL or text with the bot, and the recipe is saved without opening the browser.
+- **Screenshot Import** — send one or more screenshots (even as an album) of a recipe to the bot: Gemini reads the images and saves the recipe (screenshots are not stored).
+- **Instagram Import** — paste or share an Instagram post/reel link: the caption is read from the page metadata and turned into a recipe, and the cover image is saved in `images/` of the data repo.
 - **GitHub Storage** — each recipe is a versioned JSON file; free backup and history.
 - **Duplicate Prevention** — automatically checks URLs and titles to prevent the insertion of already existing recipes (both from the web and Telegram).
 
@@ -156,7 +158,9 @@ The bot uses `X-API-Key` to authenticate (does not require Google OAuth).
 
 **Locally**: you can use `make bot` to test in polling mode (`BACKEND_URL` is not needed).
 
-4. Send a recipe URL or free text to the bot.
+4. Send a recipe URL, an Instagram post/reel link, free text, or one or more screenshots (a photo or an album; a Telegram caption is passed to Gemini as extra text) to the bot.
+
+**Instagram**: the caption is read from the page's `<meta name="description">` (fetched with a link-preview crawler user-agent) and extracted by Gemini; the cover image is saved in `images/` of the data repo. Instagram may block requests from datacenter IPs: in that case the bot asks you to send a screenshot or paste the recipe text. Duplicates are detected on the normalized post URL.
 
 ## Scripts and Utilities
 
@@ -200,6 +204,12 @@ curl -X POST https://ricette-backend-cekk.onrender.com/recipes/from-url \
   -H "X-API-Key: your-key-here" \
   -H "Content-Type: application/json" \
   -d '{"url": "https://www.giallozafferano.it/..."}'
+
+# Extract and save from screenshots (multipart: 1-5 images, max 10 MB each, optional text)
+curl -X POST https://ricette-backend-cekk.onrender.com/recipes/from-images \
+  -H "X-API-Key: your-key-here" \
+  -F "files=@screenshot1.jpg" -F "files=@screenshot2.jpg" \
+  -F "text=optional caption"
 
 # Search (public)
 curl "https://ricette-backend-cekk.onrender.com/search?q=quick+pasta"

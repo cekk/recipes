@@ -1,6 +1,9 @@
+import asyncio
 import hashlib
 import logging
+import re
 from collections import deque
+from collections.abc import Awaitable, Callable
 
 import httpx
 from telegram import Update
@@ -23,6 +26,8 @@ _seen_update_ids: deque[int] = deque(maxlen=_SEEN_MAX)
 _seen_update_ids_set: set[int] = set()
 
 _application: Application | None = None
+
+_INSTAGRAM_URL_RE = re.compile(r"https?://(?:www\.|m\.)?instagram\.com/\S+", re.IGNORECASE)
 
 
 def _auth_headers() -> dict:
@@ -47,6 +52,8 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🍽️ *Ricette Bot*\n\n"
         "Mandami:\n"
         "• Un URL di una ricetta\n"
+        "• Un post o reel di Instagram\n"
+        "• Uno o più screenshot di una ricetta\n"
         "• Del testo con una ricetta\n\n"
         "Comandi:\n"
         "/list — ultime ricette salvate\n"
@@ -99,26 +106,36 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     text = update.message.text.strip()
+    instagram_match = _INSTAGRAM_URL_RE.search(text)
+    if instagram_match:
+        text = instagram_match.group(0)
     await update.message.reply_text("⏳ Elaborazione in corso...")
 
-    try:
+    async def call() -> httpx.Response:
         async with httpx.AsyncClient(timeout=180) as client:
             if text.startswith("http://") or text.startswith("https://"):
-                r = await client.post(
+                return await client.post(
                     f"{API_BASE}/recipes/from-url",
                     json={"url": text},
                     headers=_auth_headers(),
                 )
-            else:
-                r = await client.post(
-                    f"{API_BASE}/recipes/from-text",
-                    json={"text": text},
-                    headers=_auth_headers(),
-                )
+            return await client.post(
+                f"{API_BASE}/recipes/from-text",
+                json={"text": text},
+                headers=_auth_headers(),
+            )
+
+    await _reply_with_result(update.message, call)
+
+
+async def _reply_with_result(message, call: Callable[[], Awaitable[httpx.Response]]):
+    """Run a backend call and reply with the outcome (saved / duplicate / error)."""
+    try:
+        r = await call()
         r.raise_for_status()
         recipe = r.json()
         cats = ", ".join(recipe.get("categories", []))
-        await update.message.reply_text(
+        await message.reply_text(
             f"✅ *{recipe['title']}* salvata!\n\n"
             f"{recipe.get('description', '')}\n\n"
             f"Categorie: {cats}\n"
@@ -127,11 +144,92 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == 409:
-            await update.message.reply_text("⚠️ Questa ricetta è già presente nel database.")
+            await message.reply_text("⚠️ Questa ricetta è già presente nel database.")
+        elif exc.response.status_code == 422:
+            try:
+                detail = exc.response.json().get("detail")
+            except ValueError:
+                detail = None
+            await message.reply_text(f"❌ {detail or exc.response.text}")
         else:
-            await update.message.reply_text(f"❌ Errore API: {exc.response.status_code} - {exc.response.text}")
+            await message.reply_text(f"❌ Errore API: {exc.response.status_code} - {exc.response.text}")
     except Exception as exc:
-        await update.message.reply_text(f"❌ Errore: {exc}")
+        await message.reply_text(f"❌ Errore: {exc}")
+
+
+async def _send_images(message, images: list[bytes], caption: str | None):
+    await message.reply_text("⏳ Elaborazione in corso...")
+
+    async def call() -> httpx.Response:
+        files = [("files", (f"{i}.jpg", data, "image/jpeg")) for i, data in enumerate(images)]
+        async with httpx.AsyncClient(timeout=180) as client:
+            return await client.post(
+                f"{API_BASE}/recipes/from-images",
+                files=files,
+                data={"text": caption} if caption else None,
+                headers=_auth_headers(),
+            )
+
+    await _reply_with_result(message, call)
+
+
+# Album handling: Telegram sends each photo as a separate update sharing media_group_id.
+_MEDIA_GROUP_DELAY = 2.5
+_media_groups: dict[str, dict] = {}
+# Strong references to pending flush tasks: asyncio keeps only weak references to tasks.
+_flush_tasks: set[asyncio.Task] = set()
+
+
+def _add_to_media_group(
+    group_id: str,
+    message,
+    data: bytes,
+    caption: str | None,
+    flush: Callable[[object, list[bytes], str | None], Awaitable[None]],
+    delay: float = _MEDIA_GROUP_DELAY,
+):
+    """Accumulate a photo of an album and (re)schedule a delayed flush; does not wait."""
+    group = _media_groups.setdefault(group_id, {"message": message, "images": [], "caption": None, "task": None})
+    group["images"].append(data)
+    if caption and not group["caption"]:
+        group["caption"] = caption
+    if group["task"] is not None:
+        group["task"].cancel()
+
+    async def _flush_later():
+        await asyncio.sleep(delay)
+        done = _media_groups.pop(group_id, None)
+        if done is None:
+            return
+        try:
+            await flush(done["message"], done["images"], done["caption"])
+        except Exception:
+            logger.exception("Errore nel flush dell'album %s", group_id)
+
+    task = asyncio.create_task(_flush_later())
+    _flush_tasks.add(task)
+    task.add_done_callback(_flush_tasks.discard)
+    group["task"] = task
+
+
+async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not _is_allowed(update):
+        await update.message.reply_text("Non sei autorizzato.")
+        return
+
+    message = update.message
+    try:
+        file = await message.photo[-1].get_file()
+        data = bytes(await file.download_as_bytearray())
+    except Exception as exc:
+        await message.reply_text(f"❌ Errore nel download della foto: {exc}")
+        return
+    caption = (message.caption or "").strip() or None
+
+    if message.media_group_id is None:
+        await _send_images(message, [data], caption)
+    else:
+        _add_to_media_group(message.media_group_id, message, data, caption, _send_images)
 
 
 async def _error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
@@ -150,6 +248,7 @@ def _build_application(webhook: bool = False) -> Application:
     application.add_handler(CommandHandler("list", cmd_list))
     application.add_handler(CommandHandler("search", cmd_search))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     return application
 
 

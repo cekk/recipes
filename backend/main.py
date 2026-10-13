@@ -8,14 +8,20 @@ from urllib.parse import urlparse
 
 import trafilatura
 from bs4 import BeautifulSoup
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from ai_service import extract_recipe
+from ai_service import extract_recipe, extract_recipe_from_images
 from auth import _verify_google_token, require_auth
 from bot import process_update, setup_webhook, shutdown_webhook, webhook_secret
 from config import get_settings
 from github_store import store
+from instagram_service import (
+    download_image,
+    fetch_instagram_post,
+    is_instagram_url,
+    normalize_instagram_url,
+)
 from models import Recipe, RecipeSummary, SearchResult, TextInput, URLInput
 from search_service import keyword_search
 
@@ -135,9 +141,55 @@ async def auth_me(request: Request):
 # --- Endpoints protetti (richiedono autenticazione) ---
 
 
+async def _add_recipe_from_instagram(url: str) -> Recipe:
+    canonical = normalize_instagram_url(url)
+    if canonical is None:
+        raise HTTPException(status_code=422, detail="Link Instagram non riconosciuto (serve un post o un reel)")
+
+    index = await store.get_index()
+    for summary in index:
+        if summary.source_url and normalize_instagram_url(summary.source_url) == canonical:
+            raise HTTPException(status_code=409, detail="Ricetta già presente (URL duplicato)")
+
+    post = await fetch_instagram_post(canonical)
+    if post is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Non riesco a leggere la didascalia del post Instagram. "
+            "Manda uno screenshot o incolla il testo della ricetta.",
+        )
+
+    content = post.caption
+    if post.author:
+        content = f"Autore: @{post.author}\n\n{content}"
+    extracted = await extract_recipe(content)
+
+    recipe = Recipe(**extracted)
+    recipe.source_url = canonical
+    recipe.source_type = "instagram"
+    recipe.video_urls = [canonical] if post.is_video else []
+    recipe.image_urls = []
+
+    if post.image_url:
+        try:
+            downloaded = await download_image(post.image_url)
+            if downloaded:
+                data, content_type = downloaded
+                ext = {"image/png": "png", "image/webp": "webp"}.get(content_type, "jpg")
+                recipe.image_urls = [await store.save_image(recipe.id, data, ext)]
+        except Exception as exc:
+            print(f"Impossibile salvare la copertina Instagram: {exc}")
+
+    await store.save_recipe(recipe)
+    return recipe
+
+
 @app.post("/recipes/from-url", response_model=Recipe, dependencies=[Depends(require_auth)])
 async def add_recipe_from_url(data: URLInput):
     _validate_url(data.url)
+
+    if is_instagram_url(data.url):
+        return await _add_recipe_from_instagram(data.url)
 
     # Check if URL already exists
     index = await store.get_index()
@@ -197,6 +249,42 @@ async def add_recipe_from_text(data: TextInput):
     recipe = Recipe(**extracted)
 
     # Controlla duplicati per titolo (slug)
+    index = await store.get_index()
+    for summary in index:
+        if summary.slug == recipe.slug:
+            raise HTTPException(status_code=409, detail="Ricetta già presente (Titolo duplicato)")
+
+    await store.save_recipe(recipe)
+    return recipe
+
+
+_MAX_IMAGES = 5
+_MAX_IMAGE_BYTES = 10 * 1024 * 1024
+
+
+@app.post("/recipes/from-images", response_model=Recipe, dependencies=[Depends(require_auth)])
+async def add_recipe_from_images(files: list[UploadFile] = File(default=[]), text: str | None = Form(None)):
+    if not files:
+        raise HTTPException(status_code=422, detail="Nessuna immagine ricevuta")
+    if len(files) > _MAX_IMAGES:
+        raise HTTPException(status_code=422, detail=f"Troppe immagini (massimo {_MAX_IMAGES})")
+
+    images: list[tuple[bytes, str]] = []
+    for f in files:
+        mime = f.content_type or ""
+        if not mime.startswith("image/"):
+            raise HTTPException(status_code=422, detail="Sono accettati solo file immagine")
+        data = await f.read(_MAX_IMAGE_BYTES + 1)
+        if len(data) > _MAX_IMAGE_BYTES:
+            raise HTTPException(status_code=422, detail="Immagine troppo grande (massimo 10 MB)")
+        images.append((data, mime))
+
+    extracted = await extract_recipe_from_images(images, (text or "").strip() or None)
+    extracted["source_type"] = "screenshot"
+    extracted["image_urls"] = []
+
+    recipe = Recipe(**extracted)
+
     index = await store.get_index()
     for summary in index:
         if summary.slug == recipe.slug:

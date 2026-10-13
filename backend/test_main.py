@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 
 import bot
+from instagram_service import normalize_instagram_url, parse_instagram_html
 from main import app
 from models import Recipe, RecipeSummary
 
@@ -251,3 +252,215 @@ def test_is_allowed():
     with patch("bot.get_settings", return_value=SimpleNamespace(telegram_allowed_user_id=42)):
         assert bot._is_allowed(_update_for_user(42)) is True
         assert bot._is_allowed(_update_for_user(7)) is False
+
+
+# --- Instagram ---
+
+IG_REEL = "https://www.instagram.com/reel/DeT0hAqBIp6/"
+IG_CAPTION = "È ARRIVATO il momento della schiacciata di zucca!\nIngredienti: 500 g zucca, 300 g farina #ricettezucca"
+IG_HTML = (
+    "<html><head>"
+    '<meta name="description" content="10K likes, 151 comments - claudiamanciniph on October 10, 2026: '
+    "&quot;È ARRIVATO il momento della schiacciata di zucca!\nIngredienti: 500 g zucca, 300 g farina "
+    '#ricettezucca&quot;. " />'
+    '<meta property="og:image" content="https://scontent.cdninstagram.com/x.jpg?sig=1" />'
+    '<meta name="twitter:title" content="Claudia | Food (&#064;claudiamanciniph) &#x2022; Instagram reel" />'
+    "</head><body></body></html>"
+)
+
+
+def test_normalize_instagram_url():
+    assert normalize_instagram_url(IG_REEL + "?obrf=aHM1Z3JzOGR6cWht") == IG_REEL
+    assert normalize_instagram_url("https://www.instagram.com/claudiamanciniph/reel/DeT0hAqBIp6/") == IG_REEL
+    assert normalize_instagram_url("https://instagram.com/p/ABC123/?igsh=xyz") == "https://www.instagram.com/p/ABC123/"
+    assert normalize_instagram_url("https://www.instagram.com/reels/DeT0hAqBIp6") == IG_REEL
+    assert normalize_instagram_url("https://www.instagram.com/claudiamanciniph/") is None
+    assert normalize_instagram_url("https://example.com/reel/DeT0hAqBIp6/") is None
+
+
+def test_parse_instagram_html():
+    post = parse_instagram_html(IG_HTML, IG_REEL)
+    assert post is not None
+    assert post.caption == IG_CAPTION
+    assert post.author == "claudiamanciniph"
+    assert post.image_url == "https://scontent.cdninstagram.com/x.jpg?sig=1"
+    assert post.is_video is True
+
+
+def test_parse_instagram_html_no_caption():
+    assert parse_instagram_html("<html><head></head></html>", IG_REEL) is None
+    short = '<meta name="description" content="1 like - a on b: &quot;ciao&quot;. " />'
+    assert parse_instagram_html(short, IG_REEL) is None
+
+
+def _ig_post():
+    from instagram_service import InstagramPost
+
+    return InstagramPost(
+        canonical_url=IG_REEL, caption=IG_CAPTION, author="claudiamanciniph", image_url="https://x/i.jpg", is_video=True
+    )
+
+
+def _post_ig(url=IG_REEL + "?obrf=x"):
+    with patch("auth.get_settings") as mock_settings:
+        mock_settings.return_value.api_key = "fake-api-key"
+        return client.post("/recipes/from-url", headers={"X-API-Key": "fake-api-key"}, json={"url": url})
+
+
+@patch("main._validate_url")
+@patch("main.store.save_recipe", new_callable=AsyncMock)
+@patch("main.store.save_image", new_callable=AsyncMock)
+@patch("main.store.get_index", new_callable=AsyncMock)
+@patch("main.extract_recipe", new_callable=AsyncMock)
+@patch("main.download_image", new_callable=AsyncMock)
+@patch("main.fetch_instagram_post", new_callable=AsyncMock)
+def test_from_url_instagram_ok(mock_fetch, mock_dl, mock_extract, mock_index, mock_save_image, mock_save, _v):
+    mock_index.return_value = []
+    mock_fetch.return_value = _ig_post()
+    mock_dl.return_value = (b"img", "image/jpeg")
+    mock_extract.return_value = {"title": "Schiacciata di zucca", "image_urls": ["http://invented"]}
+    mock_save_image.return_value = "https://raw.githubusercontent.com/u/r/main/images/abc.jpg"
+
+    response = _post_ig()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["source_url"] == IG_REEL
+    assert body["source_type"] == "instagram"
+    assert body["video_urls"] == [IG_REEL]
+    assert body["image_urls"] == ["https://raw.githubusercontent.com/u/r/main/images/abc.jpg"]
+    assert "@claudiamanciniph" in mock_extract.call_args.args[0]
+    mock_save.assert_called_once()
+
+
+@patch("main._validate_url")
+@patch("main.store.save_recipe", new_callable=AsyncMock)
+@patch("main.store.get_index", new_callable=AsyncMock)
+@patch("main.fetch_instagram_post", new_callable=AsyncMock)
+def test_from_url_instagram_no_caption(mock_fetch, mock_index, mock_save, _v):
+    mock_index.return_value = []
+    mock_fetch.return_value = None
+    response = _post_ig()
+    assert response.status_code == 422
+    assert "didascalia" in response.json()["detail"]
+    mock_save.assert_not_called()
+
+
+@patch("main._validate_url")
+@patch("main.store.save_recipe", new_callable=AsyncMock)
+@patch("main.store.get_index", new_callable=AsyncMock)
+@patch("main.fetch_instagram_post", new_callable=AsyncMock)
+def test_from_url_instagram_duplicate(mock_fetch, mock_index, mock_save, _v):
+    mock_index.return_value = [
+        RecipeSummary(
+            id="1",
+            title="Zucca",
+            slug="zucca",
+            source_url=IG_REEL + "?igsh=other",
+            source_type="instagram",
+            created_at="2026-01-01",
+        )
+    ]
+    response = _post_ig()
+    assert response.status_code == 409
+    mock_fetch.assert_not_called()
+    mock_save.assert_not_called()
+
+
+@patch("main._validate_url")
+@patch("main.store.save_recipe", new_callable=AsyncMock)
+@patch("main.store.save_image", new_callable=AsyncMock)
+@patch("main.store.get_index", new_callable=AsyncMock)
+@patch("main.extract_recipe", new_callable=AsyncMock)
+@patch("main.download_image", new_callable=AsyncMock)
+@patch("main.fetch_instagram_post", new_callable=AsyncMock)
+def test_from_url_instagram_image_download_fails(
+    mock_fetch, mock_dl, mock_extract, mock_index, mock_save_image, mock_save, _v
+):
+    mock_index.return_value = []
+    mock_fetch.return_value = _ig_post()
+    mock_dl.return_value = None
+    mock_extract.return_value = {"title": "Schiacciata di zucca"}
+
+    response = _post_ig()
+    assert response.status_code == 200
+    assert response.json()["image_urls"] == []
+    mock_save_image.assert_not_called()
+    mock_save.assert_called_once()
+
+
+# --- Screenshot import ---
+
+
+def _post_images(files, text=None, auth=True):
+    data = {"text": text} if text else None
+    headers = {"X-API-Key": "fake-api-key"} if auth else {}
+    with patch("auth.get_settings") as mock_settings:
+        mock_settings.return_value.api_key = "fake-api-key"
+        return client.post("/recipes/from-images", headers=headers, files=files, data=data)
+
+
+def _img_files(n, content_type="image/jpeg"):
+    return [("files", (f"{i}.jpg", b"fake-bytes", content_type)) for i in range(n)]
+
+
+@patch("main.store.save_recipe", new_callable=AsyncMock)
+@patch("main.store.get_index", new_callable=AsyncMock)
+@patch("main.extract_recipe_from_images", new_callable=AsyncMock)
+def test_from_images_ok(mock_extract, mock_index, mock_save):
+    mock_index.return_value = []
+    mock_extract.return_value = {"title": "Schiacciata di zucca", "image_urls": ["http://invented"]}
+
+    response = _post_images(_img_files(2), text="dalla didascalia")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["source_type"] == "screenshot"
+    assert body["image_urls"] == []
+    images, text = mock_extract.call_args.args
+    assert len(images) == 2
+    assert images[0] == (b"fake-bytes", "image/jpeg")
+    assert text == "dalla didascalia"
+    mock_save.assert_called_once()
+
+
+def test_from_images_unauthorized():
+    assert _post_images(_img_files(1), auth=False).status_code == 401
+
+
+def test_from_images_no_files():
+    assert _post_images(None, text="solo testo").status_code == 422
+
+
+def test_from_images_too_many_files():
+    assert _post_images(_img_files(6)).status_code == 422
+
+
+def test_from_images_not_an_image():
+    assert _post_images(_img_files(1, content_type="text/plain")).status_code == 422
+
+
+@patch("main.store.save_recipe", new_callable=AsyncMock)
+@patch("main.store.get_index", new_callable=AsyncMock)
+@patch("main.extract_recipe_from_images", new_callable=AsyncMock)
+def test_from_images_duplicate(mock_extract, mock_index, mock_save):
+    mock_extract.return_value = {"title": "Schiacciata di zucca"}
+    mock_index.return_value = [MagicMock(slug="schiacciata-di-zucca")]
+    assert _post_images(_img_files(1)).status_code == 409
+    mock_save.assert_not_called()
+
+
+def test_media_group_batches_photos():
+    async def run():
+        flush = AsyncMock()
+        msg = MagicMock()
+        for i in range(3):
+            bot._add_to_media_group("g1", msg, f"img{i}".encode(), "cap" if i == 0 else None, flush, delay=0.05)
+        flush.assert_not_called()
+        await asyncio.sleep(0.2)
+        return flush
+
+    flush = asyncio.run(run())
+    flush.assert_awaited_once()
+    _, images, caption = flush.await_args.args
+    assert images == [b"img0", b"img1", b"img2"]
+    assert caption == "cap"
+    assert "g1" not in bot._media_groups
