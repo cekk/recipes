@@ -85,6 +85,7 @@ Configure the following variables in your `.env` file:
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token (from @BotFather) | No |
 | `TELEGRAM_ALLOWED_USER_ID` | Your Telegram User ID (from @userinfobot) | Yes, if using the bot (0 or empty = the bot rejects everyone) |
 | `BACKEND_URL` | Public backend URL (for Telegram webhooks) | No (yes if using the bot) |
+| `FRONTEND_URL` | Public frontend URL, used for recipe links in bot confirmations (e.g. `https://ricette-cekk.onrender.com`) | No (no link if empty) |
 
 For the **frontend** (in `.env` in the root or Render variables):
 
@@ -120,7 +121,7 @@ The `render.yaml` file configures everything automatically.
 4. In the dashboard, set the **environment variables** marked as `sync: false`:
    - In the backend: `GITHUB_TOKEN`, `GITHUB_REPO`, `GEMINI_API_KEY`, `API_KEY`, `GOOGLE_CLIENT_ID`, `ALLOWED_EMAILS`, `TELEGRAM_BOT_TOKEN`
    - In the frontend: `VITE_GOOGLE_CLIENT_ID`
-5. **Important**: the `render.yaml` file already contains predefined values for `VITE_API_URL` (frontend) and `BACKEND_URL` (backend). If the name of your service changes, update them accordingly in your repository or override them from the Render dashboard.
+5. **Important**: the `render.yaml` file already contains predefined values for `VITE_API_URL` (frontend) and `BACKEND_URL` / `FRONTEND_URL` (backend). If the name of your service changes, update them accordingly in your repository or override them from the Render dashboard.
 6. Add the backend and frontend URLs to the authorized origins in your Google Client ID on Cloud Console.
 
 ### Subsequent Deploys
@@ -153,6 +154,7 @@ The bot uses `X-API-Key` to authenticate (does not require Google OAuth).
 1. Create a bot with @BotFather → get `TELEGRAM_BOT_TOKEN`
 2. Get your user ID with @userinfobot → `TELEGRAM_ALLOWED_USER_ID` (**required**: if it is `0` or empty, the bot rejects every user, including for `/list` and `/search`)
 3. Configure `BACKEND_URL` with the public backend URL (e.g. `https://ricette-backend-cekk.onrender.com`)
+   and optionally `FRONTEND_URL` (e.g. `https://ricette-cekk.onrender.com`) to get a link to the saved recipe in the confirmation message
 
 **In production (Render)**: the bot activates automatically with webhooks — no separate process needed. When the backend starts, it registers with Telegram and receives updates at `POST /telegram/webhook`. The webhook is protected by a `secret_token` derived from `API_KEY` (if `API_KEY` changes, the webhook is re-registered on the next restart). It replies immediately and processes updates in the background, and repeated updates (same `update_id`) are processed only once.
 

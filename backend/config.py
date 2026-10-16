@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     # URL pubblico del backend (per webhook Telegram)
     backend_url: str = ""
 
+    # URL pubblico del frontend (per i link alle ricette nei messaggi del bot)
+    frontend_url: str = ""
+
     @property
     def allowed_emails_list(self) -> list[str]:
         if not self.allowed_emails:

@@ -2,6 +2,7 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 from fastapi.testclient import TestClient
 
 import bot
@@ -492,3 +493,62 @@ def test_media_group_batches_photos():
     assert images == [b"img0", b"img1", b"img2"]
     assert caption == "cap"
     assert "g1" not in bot._media_groups
+
+
+def _post_text(text="ricetta"):
+    with patch("auth.get_settings") as mock_settings:
+        mock_settings.return_value.api_key = "fake-api-key"
+        return TestClient(app, raise_server_exceptions=False).post(
+            "/recipes/from-text", headers={"X-API-Key": "fake-api-key"}, json={"text": text}
+        )
+
+
+@patch("main.extract_recipe", new_callable=AsyncMock)
+def test_gemini_unavailable_returns_503_with_detail(mock_extract):
+    from google.genai import errors
+
+    mock_extract.side_effect = errors.ServerError(
+        503, {"error": {"code": 503, "message": "high demand", "status": "UNAVAILABLE"}}
+    )
+    response = _post_text()
+    assert response.status_code == 503
+    assert "high demand" in response.json()["detail"]
+
+
+@patch("main.extract_recipe", new_callable=AsyncMock)
+def test_unhandled_error_returns_detail(mock_extract):
+    mock_extract.side_effect = RuntimeError("boom")
+    response = _post_text()
+    assert response.status_code == 500
+    assert response.json()["detail"] == "RuntimeError: boom"
+
+
+def _bot_reply(response: httpx.Response, frontend_url=""):
+    message = MagicMock()
+    message.reply_text = AsyncMock()
+
+    async def call():
+        return response
+
+    with patch("bot.get_settings", return_value=SimpleNamespace(frontend_url=frontend_url)):
+        asyncio.run(bot._reply_with_result(message, call))
+    return message.reply_text.call_args.args[0]
+
+
+def _http_response(status, json):
+    return httpx.Response(status, json=json, request=httpx.Request("POST", "http://test/recipes/from-url"))
+
+
+def test_bot_confirmation_includes_recipe_link():
+    text = _bot_reply(_http_response(200, {"id": "abc", "title": "Pancake"}), "https://ricette.example/")
+    assert "https://ricette.example/recipe/abc" in text
+
+
+def test_bot_confirmation_without_frontend_url():
+    text = _bot_reply(_http_response(200, {"id": "abc", "title": "Pancake"}))
+    assert "/recipe/" not in text
+
+
+def test_bot_shows_error_detail():
+    text = _bot_reply(_http_response(503, {"detail": "Gemini non disponibile"}))
+    assert text == "❌ Errore API 503: Gemini non disponibile"

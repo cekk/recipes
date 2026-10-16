@@ -10,6 +10,8 @@ import trafilatura
 from bs4 import BeautifulSoup
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from google.genai import errors as genai_errors
 from pydantic import ValidationError
 
 from ai_service import extract_recipe, extract_recipe_from_images
@@ -55,6 +57,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(genai_errors.APIError)
+async def _gemini_error_handler(request: Request, exc: genai_errors.APIError):
+    print(f"Errore Gemini su {request.url.path}: {exc}")
+    status = 503 if exc.code in (429, 500, 502, 503, 504) else 502
+    return JSONResponse(
+        status_code=status,
+        content={"detail": f"Gemini non disponibile ({exc.code} {exc.status}): {exc.message}. Riprova tra poco."},
+    )
+
+
+@app.exception_handler(Exception)
+async def _unhandled_error_handler(request: Request, exc: Exception):
+    # Starlette re-raises after this handler, so the traceback still reaches the logs
+    return JSONResponse(status_code=500, content={"detail": f"{type(exc).__name__}: {exc}"})
 
 
 def _validate_url(url: str) -> str:

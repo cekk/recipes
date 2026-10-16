@@ -128,6 +128,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _reply_with_result(update.message, call)
 
 
+def _recipe_link(recipe: dict) -> str:
+    base = get_settings().frontend_url.rstrip("/")
+    return f"\n\n🔗 [Apri la ricetta]({base}/recipe/{recipe['id']})" if base and recipe.get("id") else ""
+
+
+def _error_detail(response: httpx.Response) -> str:
+    try:
+        detail = response.json().get("detail")
+    except (ValueError, AttributeError):
+        detail = None
+    return str(detail) if detail else response.text
+
+
 async def _reply_with_result(message, call: Callable[[], Awaitable[httpx.Response]]):
     """Run a backend call and reply with the outcome (saved / duplicate / error)."""
     try:
@@ -139,22 +152,20 @@ async def _reply_with_result(message, call: Callable[[], Awaitable[httpx.Respons
             f"✅ *{recipe['title']}* salvata!\n\n"
             f"{recipe.get('description', '')}\n\n"
             f"Categorie: {cats}\n"
-            f"Difficoltà: {recipe.get('difficulty', 'N/D')}",
+            f"Difficoltà: {recipe.get('difficulty', 'N/D')}"
+            f"{_recipe_link(recipe)}",
             parse_mode="Markdown",
         )
     except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 409:
+        status = exc.response.status_code
+        if status == 409:
             await message.reply_text("⚠️ Questa ricetta è già presente nel database.")
-        elif exc.response.status_code == 422:
-            try:
-                detail = exc.response.json().get("detail")
-            except ValueError:
-                detail = None
-            await message.reply_text(f"❌ {detail or exc.response.text}")
+        elif status == 422:
+            await message.reply_text(f"❌ {_error_detail(exc.response)}")
         else:
-            await message.reply_text(f"❌ Errore API: {exc.response.status_code} - {exc.response.text}")
+            await message.reply_text(f"❌ Errore API {status}: {_error_detail(exc.response)}")
     except Exception as exc:
-        await message.reply_text(f"❌ Errore: {exc}")
+        await message.reply_text(f"❌ Errore: {type(exc).__name__}: {exc}")
 
 
 async def _send_images(message, images: list[bytes], caption: str | None):
