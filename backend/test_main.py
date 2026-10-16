@@ -368,6 +368,34 @@ def test_from_url_instagram_duplicate(mock_fetch, mock_index, mock_save, _v):
 
 @patch("main._validate_url")
 @patch("main.store.save_recipe", new_callable=AsyncMock)
+@patch("main.store.get_index", new_callable=AsyncMock)
+@patch("main.extract_recipe", new_callable=AsyncMock)
+@patch("main.fetch_instagram_post", new_callable=AsyncMock)
+def test_from_url_instagram_no_recipe_in_caption(mock_fetch, mock_extract, mock_index, mock_save, _v):
+    mock_index.return_value = []
+    mock_fetch.return_value = _ig_post()
+    mock_extract.return_value = {"title": None, "ingredients": [], "steps": []}
+    response = _post_ig()
+    assert response.status_code == 422
+    assert "screenshot" in response.json()["detail"]
+    mock_save.assert_not_called()
+
+
+@patch("main.store.save_recipe", new_callable=AsyncMock)
+@patch("main.store.get_index", new_callable=AsyncMock)
+@patch("main.extract_recipe", new_callable=AsyncMock)
+def test_from_text_no_recipe(mock_extract, mock_index, mock_save):
+    mock_index.return_value = []
+    mock_extract.return_value = {"title": None}
+    with patch("auth.get_settings") as mock_settings:
+        mock_settings.return_value.api_key = "fake-api-key"
+        response = client.post("/recipes/from-text", headers={"X-API-Key": "fake-api-key"}, json={"text": "ciao"})
+    assert response.status_code == 422
+    mock_save.assert_not_called()
+
+
+@patch("main._validate_url")
+@patch("main.store.save_recipe", new_callable=AsyncMock)
 @patch("main.store.save_image", new_callable=AsyncMock)
 @patch("main.store.get_index", new_callable=AsyncMock)
 @patch("main.extract_recipe", new_callable=AsyncMock)

@@ -10,6 +10,7 @@ import trafilatura
 from bs4 import BeautifulSoup
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import ValidationError
 
 from ai_service import extract_recipe, extract_recipe_from_images
 from auth import _verify_google_token, require_auth
@@ -141,6 +142,18 @@ async def auth_me(request: Request):
 # --- Endpoints protetti (richiedono autenticazione) ---
 
 
+_NO_RECIPE_DETAIL = "Non ho trovato una ricetta nel contenuto ricevuto."
+
+
+def _build_recipe(extracted: dict, detail: str = _NO_RECIPE_DETAIL) -> Recipe:
+    """Build a Recipe from the AI output; 422 when the model found no usable recipe (e.g. title null)."""
+    try:
+        return Recipe(**extracted)
+    except ValidationError as exc:
+        print(f"Estrazione ricetta non valida: {exc.errors()}")
+        raise HTTPException(status_code=422, detail=detail) from exc
+
+
 async def _add_recipe_from_instagram(url: str) -> Recipe:
     canonical = normalize_instagram_url(url)
     if canonical is None:
@@ -163,8 +176,14 @@ async def _add_recipe_from_instagram(url: str) -> Recipe:
     if post.author:
         content = f"Autore: @{post.author}\n\n{content}"
     extracted = await extract_recipe(content)
+    if not extracted.get("title"):
+        print(f"Nessuna ricetta nella didascalia Instagram {canonical}: {post.caption[:300]!r}")
 
-    recipe = Recipe(**extracted)
+    recipe = _build_recipe(
+        extracted,
+        "Non ho trovato una ricetta nella didascalia del post Instagram. "
+        "Manda uno screenshot o incolla il testo della ricetta.",
+    )
     recipe.source_url = canonical
     recipe.source_type = "instagram"
     recipe.video_urls = [canonical] if post.is_video else []
@@ -236,7 +255,7 @@ async def add_recipe_from_url(data: URLInput):
     extracted["source_url"] = data.url
     extracted["source_type"] = "url"
 
-    recipe = Recipe(**extracted)
+    recipe = _build_recipe(extracted)
     await store.save_recipe(recipe)
     return recipe
 
@@ -246,7 +265,7 @@ async def add_recipe_from_text(data: TextInput):
     extracted = await extract_recipe(data.text)
     extracted["source_type"] = "text"
 
-    recipe = Recipe(**extracted)
+    recipe = _build_recipe(extracted)
 
     # Controlla duplicati per titolo (slug)
     index = await store.get_index()
@@ -283,7 +302,7 @@ async def add_recipe_from_images(files: list[UploadFile] = File(default=[]), tex
     extracted["source_type"] = "screenshot"
     extracted["image_urls"] = []
 
-    recipe = Recipe(**extracted)
+    recipe = _build_recipe(extracted)
 
     index = await store.get_index()
     for summary in index:
