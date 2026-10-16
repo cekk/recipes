@@ -134,6 +134,10 @@ On the Render free tier the backend sleeps after 15 minutes of inactivity, and t
 
 Do **not** point the monitor at the frontend URL: the SPA rewrite rule in `render.yaml` returns 200 with `index.html` for any path, so the monitor would always be green without ever touching the backend.
 
+#### Install on your phone
+
+The frontend ships a web manifest and icons (`frontend/public/`), so it can be installed as a standalone web app. On iPhone: open the site in Safari → Share → **Add to Home Screen**. On Android: Chrome menu → **Add to Home screen** / **Install app**. The installed app has its own storage, so you need to sign in with Google once inside it.
+
 ## Docker (self-hosted)
 
 ```bash
